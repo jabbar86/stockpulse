@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { createServerClient } from '@/lib/supabase/server';
-import { getQuote, getHistoricalData } from '@/lib/market-data/provider';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { getQuoteWithUpstox, getHistoricalData } from '@/lib/market-data/provider';
 import { calculateTechnicalIndicators } from '@/lib/analysis/technical';
 import { analyzeStock } from '@/lib/analysis/claude-analysis';
 import { getCombinedRecommendation } from '@/lib/analysis/recommendation';
 import type { CombinedAnalysis } from '@/types';
+import { getUpstoxToken } from '@/lib/brokers/upstox-token';
 
 /**
  * Check if Indian stock market is currently in trading hours.
@@ -33,8 +32,9 @@ export async function POST(
   { params }: { params: Promise<{ symbol: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -47,11 +47,11 @@ export async function POST(
     }
 
     const upperSymbol = symbol.toUpperCase();
-    const supabase = createServerClient();
+    const serviceClient = createServiceRoleClient();
 
     // Rate limiting: max 10 AI analyses per user per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { count: analysisCount } = await supabase
+    const { count: analysisCount } = await serviceClient
       .from('analysis_history')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
@@ -74,7 +74,7 @@ export async function POST(
       Date.now() - cacheTtlMinutes * 60 * 1000
     ).toISOString();
 
-    const { data: cached } = await supabase
+    const { data: cached } = await serviceClient
       .from('analysis_cache')
       .select('*')
       .eq('symbol', upperSymbol)
@@ -86,7 +86,7 @@ export async function POST(
 
     if (cached?.data) {
       // Log in analysis_history even for cache hits
-      await supabase.from('analysis_history').insert({
+      await serviceClient.from('analysis_history').insert({
         user_id: userId,
         symbol: upperSymbol,
         type: 'ai',
@@ -98,8 +98,9 @@ export async function POST(
     }
 
     // Fetch quote and technical data
+    const upstoxToken = await getUpstoxToken(userId);
     const [quote, historicalData] = await Promise.all([
-      getQuote(upperSymbol),
+      getQuoteWithUpstox(upperSymbol, upstoxToken),
       getHistoricalData(upperSymbol, '1y'),
     ]);
 
@@ -132,7 +133,7 @@ export async function POST(
     };
 
     // Cache AI analysis result
-    await supabase.from('analysis_cache').upsert(
+    await serviceClient.from('analysis_cache').upsert(
       {
         symbol: upperSymbol,
         type: 'ai',
@@ -143,7 +144,7 @@ export async function POST(
     );
 
     // Record in analysis_history
-    await supabase.from('analysis_history').insert({
+    await serviceClient.from('analysis_history').insert({
       user_id: userId,
       symbol: upperSymbol,
       type: 'ai',

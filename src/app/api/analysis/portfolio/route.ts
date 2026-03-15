@@ -1,25 +1,24 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { createServerClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { getQuote } from '@/lib/market-data/provider';
 import { analyzePortfolio } from '@/lib/analysis/claude-analysis';
 import type { HoldingWithMetrics } from '@/types';
 
 // POST /api/analysis/portfolio - analyze entire portfolio (diversification, risk, rebalancing)
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const serviceClient = createServiceRoleClient();
 
     // Fetch all user holdings
-    const { data: holdings, error: holdingsError } = await supabase
+    const { data: holdings, error: holdingsError } = await serviceClient
       .from('holdings')
       .select('*')
       .eq('user_id', userId);

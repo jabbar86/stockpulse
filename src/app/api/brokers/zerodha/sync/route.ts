@@ -1,55 +1,62 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { createServerClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { decryptToken } from '@/lib/brokers/encryption';
-import { fetchHoldings as fetchZerodhaHoldings } from '@/lib/brokers/zerodha';
-import { normalizeZerodhaHoldings } from '@/lib/brokers/normalize';
 
-// POST /api/brokers/zerodha/sync - re-fetch holdings from Zerodha
-export async function POST() {
+// POST /api/brokers/zerodha/sync - re-fetch holdings from Zerodha Kite
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const serviceClient = createServiceRoleClient();
+    const apiKey = process.env.ZERODHA_API_KEY;
 
-    // Fetch stored broker connection
-    const { data: connection, error: connError } = await supabase
-      .from('broker_connections')
-      .select('*')
+    // Fetch stored token
+    const { data: tokenRow } = await serviceClient
+      .from('broker_tokens')
+      .select('encrypted_token')
       .eq('user_id', userId)
       .eq('broker', 'zerodha')
-      .eq('status', 'connected')
       .single();
 
-    if (connError || !connection) {
+    if (!tokenRow) {
       return NextResponse.json(
-        { error: 'Zerodha account not connected. Please connect first.' },
+        { error: 'Zerodha not connected. Please connect first.' },
         { status: 404 }
       );
     }
 
-    // Decrypt access token
-    const accessToken = decryptToken(connection.access_token);
+    const accessToken = decryptToken(tokenRow.encrypted_token);
 
-    // Fetch holdings from Zerodha
-    let brokerHoldings;
+    // Fetch holdings from Kite API
+    let holdings;
     try {
-      const rawHoldings = await fetchZerodhaHoldings(accessToken);
-      brokerHoldings = normalizeZerodhaHoldings(rawHoldings);
+      const res = await fetch('https://api.kite.trade/portfolio/holdings', {
+        headers: {
+          'X-Kite-Version': '3',
+          Authorization: `token ${apiKey}:${accessToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Kite API returned ${res.status}`);
+      }
+
+      const data = await res.json();
+      holdings = data.data || [];
     } catch (fetchError) {
       console.error('Zerodha holdings fetch failed:', fetchError);
 
-      // Mark connection as expired if token is invalid
-      await supabase
+      await serviceClient
         .from('broker_connections')
         .update({ status: 'expired' })
-        .eq('id', connection.id);
+        .eq('user_id', userId)
+        .eq('broker', 'zerodha');
 
       return NextResponse.json(
         { error: 'Failed to fetch holdings. Token may have expired. Please reconnect.' },
@@ -57,48 +64,53 @@ export async function POST() {
       );
     }
 
-    // Remove old Zerodha holdings for this user
-    await supabase
+    // Remove old Zerodha holdings
+    await serviceClient
       .from('holdings')
       .delete()
       .eq('user_id', userId)
       .eq('source', 'zerodha');
 
-    // Insert fresh holdings
-    if (brokerHoldings.length > 0) {
-      const holdingsToInsert = brokerHoldings.map((holding) => ({
+    // Normalize and insert fresh holdings
+    if (holdings.length > 0) {
+      const holdingsToInsert = holdings.map((h: {
+        tradingsymbol: string;
+        instrument_token: number;
+        exchange: string;
+        quantity: number;
+        average_price: number;
+        last_price: number;
+      }) => ({
         user_id: userId,
-        symbol: holding.symbol,
-        name: holding.name,
-        exchange: holding.exchange as 'NSE' | 'BSE',
-        quantity: holding.quantity,
-        avg_price: holding.avg_price,
+        symbol: h.tradingsymbol,
+        name: h.tradingsymbol, // Kite doesn't return company names in holdings
+        exchange: (h.exchange === 'BSE' ? 'BSE' : 'NSE') as 'NSE' | 'BSE',
+        quantity: h.quantity,
+        avg_price: h.average_price,
         source: 'zerodha' as const,
         updated_at: new Date().toISOString(),
       }));
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await serviceClient
         .from('holdings')
         .insert(holdingsToInsert);
 
       if (insertError) {
-        console.error('Holdings insert error:', insertError);
-        return NextResponse.json(
-          { error: 'Failed to save holdings' },
-          { status: 500 }
-        );
+        console.error('Zerodha holdings insert error:', insertError);
+        return NextResponse.json({ error: 'Failed to save holdings' }, { status: 500 });
       }
     }
 
-    // Update last_synced timestamp
-    await supabase
+    // Update last_synced
+    await serviceClient
       .from('broker_connections')
       .update({ last_synced: new Date().toISOString() })
-      .eq('id', connection.id);
+      .eq('user_id', userId)
+      .eq('broker', 'zerodha');
 
     return NextResponse.json({
       success: true,
-      holdings_count: brokerHoldings.length,
+      holdings_count: holdings.length,
       synced_at: new Date().toISOString(),
     });
   } catch (error) {

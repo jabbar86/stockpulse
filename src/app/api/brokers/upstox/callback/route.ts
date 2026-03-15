@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { encryptToken } from '@/lib/brokers/encryption';
 import { fetchHoldings as fetchUpstoxHoldings } from '@/lib/brokers/upstox';
 import { normalizeUpstoxHoldings } from '@/lib/brokers/normalize';
@@ -9,8 +7,9 @@ import { normalizeUpstoxHoldings } from '@/lib/brokers/normalize';
 // GET /api/brokers/upstox/callback?code=xxx - exchange auth code for token, store and import holdings
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       // Redirect to login if not authenticated
@@ -62,9 +61,9 @@ export async function GET(request: NextRequest) {
 
     // Encrypt and store the token
     const encryptedToken = encryptToken(accessToken);
-    const supabase = createServerClient();
+    const serviceClient = createServiceRoleClient();
 
-    await supabase.from('broker_connections').upsert(
+    await serviceClient.from('broker_connections').upsert(
       {
         user_id: userId,
         broker: 'upstox',
@@ -83,7 +82,7 @@ export async function GET(request: NextRequest) {
 
       // Upsert holdings into the holdings table
       for (const holding of brokerHoldings) {
-        await supabase.from('holdings').upsert(
+        await serviceClient.from('holdings').upsert(
           {
             user_id: userId,
             symbol: holding.symbol,

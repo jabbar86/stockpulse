@@ -1,29 +1,31 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-// GET /api/brokers/zerodha/auth - return Zerodha/Kite login URL
-export async function GET() {
+// GET /api/brokers/zerodha/auth - return Zerodha Kite Connect OAuth URL
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const apiKey = process.env.KITE_API_KEY;
+    const apiKey = process.env.ZERODHA_API_KEY;
+    const redirectUri = process.env.ZERODHA_REDIRECT_URI;
 
-    if (!apiKey) {
+    if (!apiKey || !redirectUri) {
       return NextResponse.json(
-        { error: 'Zerodha broker integration is not configured' },
+        { error: 'Zerodha Kite Connect is not configured. Set ZERODHA_API_KEY, ZERODHA_API_SECRET, and ZERODHA_REDIRECT_URI in environment variables. You can get these from https://kite.trade' },
         { status: 503 }
       );
     }
 
-    const loginUrl = `https://kite.zerodha.com/connect/login?v=3&api_key=${apiKey}`;
+    // Kite Connect OAuth login URL
+    const authUrl = `https://kite.zerodha.com/connect/login?v=3&api_key=${apiKey}`;
 
-    return NextResponse.json({ authUrl: loginUrl });
+    return NextResponse.json({ authUrl });
   } catch (error) {
     console.error('Zerodha auth error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

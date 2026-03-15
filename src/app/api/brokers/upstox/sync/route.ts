@@ -1,25 +1,24 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { createServerClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { decryptToken } from '@/lib/brokers/encryption';
 import { fetchHoldings as fetchUpstoxHoldings } from '@/lib/brokers/upstox';
 import { normalizeUpstoxHoldings } from '@/lib/brokers/normalize';
 
 // POST /api/brokers/upstox/sync - re-fetch holdings from Upstox
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
+    const serviceClient = createServiceRoleClient();
 
     // Fetch stored broker connection
-    const { data: connection, error: connError } = await supabase
+    const { data: connection, error: connError } = await serviceClient
       .from('broker_connections')
       .select('*')
       .eq('user_id', userId)
@@ -46,7 +45,7 @@ export async function POST() {
       console.error('Upstox holdings fetch failed:', fetchError);
 
       // Mark connection as expired if token is invalid
-      await supabase
+      await serviceClient
         .from('broker_connections')
         .update({ status: 'expired' })
         .eq('id', connection.id);
@@ -58,7 +57,7 @@ export async function POST() {
     }
 
     // Remove old Upstox holdings for this user
-    await supabase
+    await serviceClient
       .from('holdings')
       .delete()
       .eq('user_id', userId)
@@ -77,7 +76,7 @@ export async function POST() {
         updated_at: new Date().toISOString(),
       }));
 
-      const { error: insertError } = await supabase
+      const { error: insertError } = await serviceClient
         .from('holdings')
         .insert(holdingsToInsert);
 
@@ -91,7 +90,7 @@ export async function POST() {
     }
 
     // Update last_synced timestamp
-    await supabase
+    await serviceClient
       .from('broker_connections')
       .update({ last_synced: new Date().toISOString() })
       .eq('id', connection.id);

@@ -42,7 +42,7 @@ export default function AddHoldingDialog({ open, onOpenChange, onSuccess }: AddH
       const res = await fetch(`/api/stocks?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
-        setSearchResults(data.stocks || data || []);
+        setSearchResults(data.results || data.stocks || []);
       }
     } catch {
       // silently fail search

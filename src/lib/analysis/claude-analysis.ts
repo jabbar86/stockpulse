@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import type {
   StockQuote,
   TechnicalIndicators,
@@ -7,7 +7,9 @@ import type {
   HoldingWithMetrics,
 } from '@/types';
 
-const anthropic = new Anthropic();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function analyzeStock(
   symbol: string,
@@ -67,20 +69,20 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
 }`;
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
     });
 
-    const textBlock = response.content.find((block) => block.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
-      throw new Error('No text response from Claude');
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
     }
 
-    const parsed = JSON.parse(textBlock.text) as AIAnalysis;
+    const parsed = JSON.parse(content) as AIAnalysis;
 
-    // Validate required fields
     if (
       !parsed.recommendation ||
       typeof parsed.confidence !== 'number' ||
@@ -88,16 +90,16 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
       !Array.isArray(parsed.key_factors) ||
       !Array.isArray(parsed.risks)
     ) {
-      throw new Error('Invalid response structure from Claude');
+      throw new Error('Invalid response structure from OpenAI');
     }
 
     return parsed;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('Failed to parse Claude response as JSON');
+      throw new Error('Failed to parse OpenAI response as JSON');
     }
     throw new Error(
-      `Claude analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      `AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
 }
@@ -147,18 +149,19 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
 }`;
 
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
     });
 
-    const textBlock = response.content.find((block) => block.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
-      throw new Error('No text response from Claude');
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('No response from OpenAI');
     }
 
-    const parsed = JSON.parse(textBlock.text);
+    const parsed = JSON.parse(content);
 
     if (
       !parsed.summary ||
@@ -172,7 +175,7 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
     return parsed;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('Failed to parse Claude portfolio analysis response');
+      throw new Error('Failed to parse OpenAI portfolio analysis response');
     }
     throw new Error(
       `Portfolio analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getHistoricalData } from '@/lib/market-data/provider';
 import { z } from 'zod';
 
@@ -12,8 +11,9 @@ const querySchema = z.object({
 // GET /api/stocks/historical?symbol=xxx&period=1y - fetch historical price data
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

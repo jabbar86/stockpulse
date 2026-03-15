@@ -1,69 +1,136 @@
 'use client';
 
 import { Suspense, useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { TrendingUp, Loader2 } from 'lucide-react';
+import { Loader2, EyeIcon, EyeOffIcon, MailIcon, AtSignIcon, LockIcon, CheckCircle2Icon } from 'lucide-react';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
 
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const justVerified = searchParams.get('verified') === 'true';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setNeedsVerification(false);
 
-    const result = await signIn('credentials', {
+    const supabase = createClient();
+    const { error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
-      redirect: false,
     });
 
-    if (result?.error) {
-      setError('Invalid email or password');
+    if (authError) {
+      if (authError.message.toLowerCase().includes('email not confirmed')) {
+        setNeedsVerification(true);
+      } else if (authError.message.toLowerCase().includes('invalid login credentials')) {
+        setError(
+          'Invalid email or password. If you don\'t have an account, please sign up first.'
+        );
+      } else {
+        setError(authError.message);
+      }
       setLoading(false);
     } else {
       router.push(callbackUrl);
+      router.refresh();
+    }
+  }
+
+  async function handleResendVerification() {
+    setResending(true);
+    const supabase = createClient();
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    setResending(false);
+    if (resendError) {
+      setError(resendError.message);
+    } else {
+      setResent(true);
     }
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <div className="flex justify-center mb-2">
-          <TrendingUp className="h-10 w-10 text-primary" />
-        </div>
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
-        <CardDescription>Sign in to your stock analysis account</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
-              {error}
+    <div className="space-y-6">
+      <div className="text-center space-y-1.5">
+        <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
+        <p className="text-base text-muted-foreground">
+          Sign in to your StockPulse account
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {justVerified && (
+          <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm p-3.5 rounded-xl text-center font-medium flex items-center justify-center gap-2">
+            <CheckCircle2Icon className="size-4" />
+            Email verified! You can now sign in.
+          </div>
+        )}
+
+        {needsVerification && (
+          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm p-4 rounded-xl text-center space-y-3">
+            <div className="flex justify-center">
+              <div className="size-10 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <MailIcon className="size-5" />
+              </div>
             </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <p className="font-semibold text-sm">Email not verified</p>
+            <p className="text-xs opacity-80">
+              Check your inbox for the verification link sent to{' '}
+              <span className="font-semibold">{email}</span>
+            </p>
+            {resent ? (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-1">
+                <CheckCircle2Icon className="size-3" />
+                Verification email resent!
+              </p>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs rounded-lg"
+                onClick={handleResendVerification}
+                disabled={resending}
+              >
+                {resending && <Loader2 className="mr-1.5 size-3 animate-spin" />}
+                Resend verification email
+              </Button>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-xl text-center font-medium">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="email" className="text-sm font-medium text-muted-foreground">Email</Label>
+          <div className="relative">
+            <AtSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
             <Input
               id="email"
               type="email"
@@ -71,33 +138,58 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoFocus
+              className="h-12 text-base pl-10 rounded-xl bg-muted/30 border-muted-foreground/10 focus:bg-background transition-colors"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">Password</Label>
+          <div className="relative">
+            <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
             <Input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              className="h-12 text-base pl-10 pr-10 rounded-xl bg-muted/30 border-muted-foreground/10 focus:bg-background transition-colors"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors"
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+            </button>
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Sign in
-          </Button>
-        </form>
-      </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="text-primary hover:underline">
-            Sign up
-          </Link>
-        </p>
-      </CardFooter>
-    </Card>
+        </div>
+
+        <Button type="submit" className="w-full h-12 font-semibold rounded-xl text-base" disabled={loading}>
+          {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
+          Sign in
+        </Button>
+      </form>
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-muted-foreground/10" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-background px-3 text-muted-foreground/50">or</span>
+        </div>
+      </div>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{' '}
+        <Link href="/register" className="text-primary font-semibold hover:underline">
+          Sign up
+        </Link>
+      </p>
+    </div>
   );
 }
 

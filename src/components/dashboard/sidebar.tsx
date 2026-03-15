@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/lib/auth/session-provider';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -10,91 +11,91 @@ import {
   LineChart,
   Link2,
   LogOut,
-  Menu,
-  X,
+  BarChart3,
+  ChevronRight,
+  Newspaper,
 } from 'lucide-react';
-import { signOut } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/market', label: 'Market', icon: BarChart3 },
   { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { href: '/stocks', label: 'Stocks', icon: TrendingUp },
-  { href: '/brokers', label: 'Brokers', icon: Link2 },
+  { href: '/news', label: 'News', icon: Newspaper },
+  { href: '/brokers', label: 'Connect', icon: Link2 },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { profile, signOut } = useAuth();
+  const name = profile?.name || 'User';
+  const email = profile?.email || '';
+  const initials = name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
-    <>
-      {/* Mobile toggle */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 md:hidden"
-        onClick={() => setMobileOpen(!mobileOpen)}
-      >
-        {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 bg-sidebar border-r border-sidebar-border md:flex flex-col">
+      <div className="p-5 border-b border-sidebar-border">
+        <Link href="/dashboard" className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-md">
+            <LineChart className="size-5" />
+          </div>
+          <span className="font-bold text-xl tracking-tight text-sidebar-foreground">StockPulse</span>
+        </Link>
+      </div>
 
-      {/* Overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      <nav className="flex-1 p-3 space-y-1 mt-1">
+        {navItems.map((item) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + '/');
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all',
+                isActive
+                  ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
+                  : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent'
+              )}
+            >
+              <item.icon className="size-5" />
+              {item.label}
+              {isActive && <ChevronRight className="size-4 ml-auto opacity-70" />}
+            </Link>
+          );
+        })}
+      </nav>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-40 w-64 bg-card border-r flex flex-col transition-transform md:translate-x-0',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        <div className="p-6 border-b">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <LineChart className="h-6 w-6 text-primary" />
-            <span className="font-bold text-lg">StockAnalysis</span>
-          </Link>
+      <div className="p-3 border-t border-sidebar-border">
+        {/* User profile */}
+        <div className="flex items-center gap-3 px-3 py-3">
+          <Avatar className="size-9 ring-2 ring-sidebar-primary/30">
+            <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-foreground text-sm font-semibold">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-sidebar-foreground truncate">{name}</p>
+            {email && (
+              <p className="text-xs text-sidebar-foreground/50 truncate">{email}</p>
+            )}
+          </div>
         </div>
-
-        <nav className="flex-1 p-4 space-y-1">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + '/');
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                )}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-4 border-t">
-          <button
-            onClick={() => signOut({ callbackUrl: '/login' })}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted w-full transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </button>
-        </div>
-      </aside>
-    </>
+        {/* Sign out */}
+        <button
+          onClick={() => signOut()}
+          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors mt-1"
+        >
+          <LogOut className="size-4" />
+          Sign out
+        </button>
+      </div>
+    </aside>
   );
 }

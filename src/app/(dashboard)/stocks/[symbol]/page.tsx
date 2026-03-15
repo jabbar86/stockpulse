@@ -67,6 +67,7 @@ export default function StockAnalysisPage() {
   const symbol = params.symbol?.toUpperCase() || '';
 
   const [analysis, setAnalysis] = useState<CombinedAnalysis | null>(null);
+  const [stockQuote, setStockQuote] = useState<StockQuote | null>(null);
   const [historicalData, setHistoricalData] = useState<HistoricalDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<Period>('3M');
@@ -84,8 +85,18 @@ export default function StockAnalysisPage() {
         const res = await fetch(`/api/stocks/${symbol}/analysis?period=${period}`);
         if (res.ok) {
           const data = await res.json();
-          setAnalysis(data.analysis || data);
-          setHistoricalData(data.historicalData || data.historical_data || []);
+          // API returns flat object with { symbol, name, current_price, quote, technical, historicalData }
+          setAnalysis({
+            symbol: data.symbol,
+            name: data.name || data.quote?.name || symbol,
+            current_price: data.current_price ?? data.quote?.price ?? 0,
+            technical: data.technical,
+            recommendation: data.recommendation || data.technical?.overallSignal || 'neutral',
+            confidence: data.confidence ?? Math.abs(data.technical?.score ?? 0),
+            analyzed_at: data.analyzed_at || new Date().toISOString(),
+          });
+          setStockQuote(data.quote || null);
+          setHistoricalData(data.historicalData || []);
         }
       } catch {
         // silently fail
@@ -132,9 +143,8 @@ export default function StockAnalysisPage() {
     );
   }
 
-  const priceChange = analysis?.current_price
-    ? analysis.current_price - (analysis.technical?.sma?.sma20 || analysis.current_price)
-    : 0;
+  const priceChange = stockQuote?.change ?? 0;
+  const priceChangePercent = stockQuote?.changePercent ?? 0;
   const isPositive = priceChange >= 0;
 
   return (
@@ -160,22 +170,64 @@ export default function StockAnalysisPage() {
           )}
         </div>
         {analysis?.current_price !== undefined && (
-          <div className="flex items-center gap-3">
-            <span className="text-3xl font-bold">{formatCurrency(analysis.current_price)}</span>
-            <div
-              className={`flex items-center gap-1 text-lg font-medium ${
-                isPositive
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-red-600 dark:text-red-400'
-              }`}
-            >
-              {isPositive ? (
-                <TrendingUpIcon className="size-5" />
-              ) : (
-                <TrendingDownIcon className="size-5" />
-              )}
+          <>
+            <div className="flex items-center gap-3">
+              <span className="text-3xl font-bold">{formatCurrency(analysis.current_price)}</span>
+              <div
+                className={`flex items-center gap-1 text-lg font-medium ${
+                  isPositive
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}
+              >
+                {isPositive ? (
+                  <TrendingUpIcon className="size-5" />
+                ) : (
+                  <TrendingDownIcon className="size-5" />
+                )}
+                <span>
+                  {isPositive ? '+' : ''}{priceChange.toFixed(2)} ({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)
+                </span>
+              </div>
             </div>
-          </div>
+            {stockQuote && (
+              <div className="space-y-3">
+                {/* Day Range Bar */}
+                {stockQuote.dayLow > 0 && stockQuote.dayHigh > 0 && (
+                  <div className="max-w-sm">
+                    <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
+                      <span>Day Low</span>
+                      <span>Day High</span>
+                    </div>
+                    <div className="relative h-2 rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400 dark:from-red-500 dark:via-yellow-500 dark:to-green-500">
+                      {(() => {
+                        const range = stockQuote.dayHigh - stockQuote.dayLow;
+                        const position = range > 0
+                          ? ((analysis!.current_price - stockQuote.dayLow) / range) * 100
+                          : 50;
+                        return (
+                          <div
+                            className="absolute top-1/2 -translate-y-1/2 size-3.5 rounded-full bg-foreground border-2 border-background shadow-md"
+                            style={{ left: `calc(${Math.max(0, Math.min(100, position))}% - 7px)` }}
+                          />
+                        );
+                      })()}
+                    </div>
+                    <div className="flex justify-between text-xs font-medium mt-1 tabular-nums">
+                      <span>{formatCurrency(stockQuote.dayLow)}</span>
+                      <span>{formatCurrency(stockQuote.dayHigh)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  {stockQuote.open > 0 && <span>Open: {formatCurrency(stockQuote.open)}</span>}
+                  {stockQuote.previousClose > 0 && <span>Prev Close: {formatCurrency(stockQuote.previousClose)}</span>}
+                  {stockQuote.volume > 0 && <span>Vol: {(stockQuote.volume / 1e6).toFixed(2)}M</span>}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

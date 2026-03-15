@@ -43,7 +43,7 @@ export default function StocksPage() {
       const res = await fetch(`/api/stocks?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
-        setSearchResults(data.stocks || data || []);
+        setSearchResults(data.results || []);
       }
     } catch {
       // silently fail

@@ -1,49 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { encryptToken } from '@/lib/brokers/encryption';
-import { fetchHoldings as fetchZerodhaHoldings } from '@/lib/brokers/zerodha';
-import { normalizeZerodhaHoldings } from '@/lib/brokers/normalize';
-import crypto from 'crypto';
 
-// GET /api/brokers/zerodha/callback?request_token=xxx - exchange request token for session, import holdings
+// GET /api/brokers/zerodha/callback?request_token=xxx&status=success
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const { searchParams } = new URL(request.url);
+    const requestToken = searchParams.get('request_token');
+    const status = searchParams.get('status');
+
+    if (status !== 'success' || !requestToken) {
+      return NextResponse.redirect(new URL('/brokers?error=zerodha_auth_failed', request.url));
+    }
+
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    const { searchParams } = new URL(request.url);
-    const requestToken = searchParams.get('request_token');
-    const status = searchParams.get('status');
+    const apiKey = process.env.ZERODHA_API_KEY!;
+    const apiSecret = process.env.ZERODHA_API_SECRET!;
 
-    if (status === 'cancelled') {
-      return NextResponse.redirect(
-        new URL('/portfolio?broker_error=user_cancelled', request.url)
-      );
-    }
-
-    if (!requestToken) {
-      return NextResponse.redirect(
-        new URL('/portfolio?broker_error=missing_request_token', request.url)
-      );
-    }
-
-    const apiKey = process.env.KITE_API_KEY!;
-    const apiSecret = process.env.KITE_API_SECRET!;
-
-    // Generate checksum: SHA-256 of (api_key + request_token + api_secret)
+    // Exchange request token for access token
+    // Kite Connect requires SHA256 checksum: SHA256(api_key + request_token + api_secret)
+    const crypto = await import('crypto');
     const checksum = crypto
       .createHash('sha256')
       .update(apiKey + requestToken + apiSecret)
       .digest('hex');
 
-    // Generate session
-    const sessionResponse = await fetch('https://api.kite.trade/session/token', {
+    const tokenRes = await fetch('https://api.kite.trade/session/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -53,69 +42,44 @@ export async function GET(request: NextRequest) {
       }),
     });
 
-    if (!sessionResponse.ok) {
-      console.error('Zerodha session generation failed:', await sessionResponse.text());
-      return NextResponse.redirect(
-        new URL('/portfolio?broker_error=session_generation_failed', request.url)
-      );
+    const tokenData = await tokenRes.json();
+
+    if (!tokenRes.ok || !tokenData.data?.access_token) {
+      console.error('Zerodha token exchange failed:', tokenData);
+      return NextResponse.redirect(new URL('/brokers?error=zerodha_token_failed', request.url));
     }
 
-    const sessionData = await sessionResponse.json();
-    const accessToken = sessionData.data?.access_token;
-
-    if (!accessToken) {
-      return NextResponse.redirect(
-        new URL('/portfolio?broker_error=no_access_token', request.url)
-      );
-    }
-
-    // Encrypt and store the token
+    const accessToken = tokenData.data.access_token;
     const encryptedToken = encryptToken(accessToken);
-    const supabase = createServerClient();
 
-    await supabase.from('broker_connections').upsert(
+    const serviceClient = createServiceRoleClient();
+
+    // Store connection
+    await serviceClient.from('broker_connections').upsert(
       {
         user_id: userId,
         broker: 'zerodha',
-        access_token: encryptedToken,
         status: 'connected',
-        last_synced: new Date().toISOString(),
+        last_synced: null,
         created_at: new Date().toISOString(),
       },
       { onConflict: 'user_id,broker' }
     );
 
-    // Fetch and import holdings
-    try {
-      const rawHoldings = await fetchZerodhaHoldings(accessToken);
-      const brokerHoldings = normalizeZerodhaHoldings(rawHoldings);
-
-      for (const holding of brokerHoldings) {
-        await supabase.from('holdings').upsert(
-          {
-            user_id: userId,
-            symbol: holding.symbol,
-            name: holding.name,
-            exchange: holding.exchange as 'NSE' | 'BSE',
-            quantity: holding.quantity,
-            avg_price: holding.avg_price,
-            source: 'zerodha',
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: 'user_id,symbol,source' }
-        );
-      }
-    } catch (holdingsError) {
-      console.error('Failed to import Zerodha holdings:', holdingsError);
-    }
-
-    return NextResponse.redirect(
-      new URL('/portfolio?broker_connected=zerodha', request.url)
+    // Store encrypted token
+    await serviceClient.from('broker_tokens').upsert(
+      {
+        user_id: userId,
+        broker: 'zerodha',
+        encrypted_token: encryptedToken,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,broker' }
     );
+
+    return NextResponse.redirect(new URL('/brokers?connected=zerodha', request.url));
   } catch (error) {
     console.error('Zerodha callback error:', error);
-    return NextResponse.redirect(
-      new URL('/portfolio?broker_error=unexpected_error', request.url)
-    );
+    return NextResponse.redirect(new URL('/brokers?error=zerodha_error', request.url));
   }
 }

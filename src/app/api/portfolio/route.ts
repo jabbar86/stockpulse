@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/auth-options';
-import { createServerClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import type { HoldingWithMetrics, PortfolioSummary } from '@/types';
 import { getQuote } from '@/lib/market-data/provider';
+import { getUpstoxToken } from '@/lib/brokers/upstox-token';
+import { getUpstoxLTP } from '@/lib/market-data/upstox-provider';
 
 // Validation schemas
 const addHoldingSchema = z.object({
@@ -13,7 +13,7 @@ const addHoldingSchema = z.object({
   exchange: z.enum(['NSE', 'BSE']),
   quantity: z.number().positive(),
   avg_price: z.number().positive(),
-  source: z.enum(['manual', 'upstox', 'zerodha']).default('manual'),
+  source: z.enum(['manual', 'upstox', 'angelone', 'fyers', 'csv']).default('manual'),
 });
 
 const updateHoldingSchema = z.object({
@@ -23,17 +23,18 @@ const updateHoldingSchema = z.object({
 });
 
 // GET /api/portfolio - fetch user holdings with live prices and portfolio summary
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = createServerClient();
-    const { data: holdings, error } = await supabase
+    const serviceClient = createServiceRoleClient();
+    const { data: holdings, error } = await serviceClient
       .from('holdings')
       .select('*')
       .eq('user_id', userId)
@@ -58,18 +59,43 @@ export async function GET() {
       return NextResponse.json({ holdings: [], summary: emptySummary });
     }
 
+    // Try batch Upstox LTP if user has a connected Upstox account
+    const upstoxToken = await getUpstoxToken(userId);
+    let upstoxPrices: Map<string, { price: number; change: number; changePercent: number }> | null = null;
+
+    if (upstoxToken) {
+      try {
+        const symbols = holdings.map((h) => h.symbol);
+        upstoxPrices = await getUpstoxLTP(symbols, upstoxToken);
+      } catch (error) {
+        console.warn('Upstox batch LTP failed, falling back to Yahoo:', error);
+      }
+    }
+
     // Fetch live prices for all holdings
     const enrichedHoldings: HoldingWithMetrics[] = await Promise.all(
       holdings.map(async (holding) => {
         try {
-          const quote = await getQuote(holding.symbol);
-          const currentPrice = quote.price;
+          let currentPrice: number;
+          let dayChange: number;
+          let dayChangePercent: number;
+
+          const upstoxData = upstoxPrices?.get(holding.symbol.toUpperCase());
+          if (upstoxData) {
+            currentPrice = upstoxData.price;
+            dayChange = upstoxData.change * holding.quantity;
+            dayChangePercent = upstoxData.changePercent;
+          } else {
+            const quote = await getQuote(holding.symbol);
+            currentPrice = quote.price;
+            dayChange = quote.change * holding.quantity;
+            dayChangePercent = quote.changePercent;
+          }
+
           const currentValue = currentPrice * holding.quantity;
           const investedValue = holding.avg_price * holding.quantity;
           const pnl = currentValue - investedValue;
           const pnlPercent = investedValue > 0 ? (pnl / investedValue) * 100 : 0;
-          const dayChange = quote.change * holding.quantity;
-          const dayChangePercent = quote.changePercent;
 
           return {
             ...holding,
@@ -140,8 +166,9 @@ export async function GET() {
 // POST /api/portfolio - add a new holding
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -157,8 +184,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
-    const { data, error } = await supabase
+    const serviceClient = createServiceRoleClient();
+    const { data, error } = await serviceClient
       .from('holdings')
       .insert({
         user_id: userId,
@@ -187,8 +214,9 @@ export async function POST(request: NextRequest) {
 // PUT /api/portfolio - update a holding
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -213,10 +241,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    const serviceClient = createServiceRoleClient();
 
     // Verify ownership
-    const { data: existing } = await supabase
+    const { data: existing } = await serviceClient
       .from('holdings')
       .select('id')
       .eq('id', id)
@@ -227,7 +255,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await serviceClient
       .from('holdings')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id)
@@ -250,24 +278,25 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/portfolio?id=xxx - delete a holding
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = (session?.user as { id: string })?.id;
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    const body = await request.json();
+    const id = body?.id;
 
     if (!id) {
       return NextResponse.json({ error: 'Holding id is required' }, { status: 400 });
     }
 
-    const supabase = createServerClient();
+    const serviceClient = createServiceRoleClient();
 
     // Verify ownership
-    const { data: existing } = await supabase
+    const { data: existing } = await serviceClient
       .from('holdings')
       .select('id')
       .eq('id', id)
@@ -278,7 +307,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Holding not found' }, { status: 404 });
     }
 
-    const { error } = await supabase
+    const { error } = await serviceClient
       .from('holdings')
       .delete()
       .eq('id', id)

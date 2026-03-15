@@ -2,7 +2,7 @@
 export interface Stock {
   symbol: string;
   name: string;
-  exchange: 'NSE' | 'BSE';
+  exchange: 'NSE' | 'BSE' | 'COMEX' | 'NYMEX';
   sector?: string;
   industry?: string;
 }
@@ -45,7 +45,7 @@ export interface Holding {
   quantity: number;
   avg_price: number;
   current_price?: number;
-  source: 'manual' | 'upstox' | 'zerodha';
+  source: 'manual' | 'upstox' | 'angelone' | 'fyers' | 'zerodha' | 'groww' | '5paisa' | 'dhan' | 'kotak' | 'icici' | 'hdfc' | 'motilal' | 'sharekhan' | 'paytm' | 'csv';
   created_at: string;
   updated_at: string;
 }
@@ -123,7 +123,7 @@ export interface CombinedAnalysis {
 export interface BrokerConnection {
   id: string;
   user_id: string;
-  broker: 'upstox' | 'zerodha';
+  broker: 'upstox' | 'angelone' | 'fyers' | 'zerodha' | 'groww' | '5paisa' | 'dhan' | 'kotak' | 'icici' | 'hdfc' | 'motilal' | 'sharekhan' | 'paytm';
   status: 'connected' | 'disconnected' | 'expired';
   last_synced?: string;
   created_at: string;
