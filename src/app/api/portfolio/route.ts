@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import type { HoldingWithMetrics, PortfolioSummary } from '@/types';
-import { getQuote } from '@/lib/market-data/provider';
-import { getUpstoxToken } from '@/lib/brokers/upstox-token';
-import { getUpstoxLTP } from '@/lib/market-data/upstox-provider';
+
+export const maxDuration = 30;
 
 // Validation schemas
 const addHoldingSchema = z.object({
@@ -22,7 +21,7 @@ const updateHoldingSchema = z.object({
   avg_price: z.number().positive().optional(),
 });
 
-// GET /api/portfolio - fetch user holdings with live prices and portfolio summary
+// GET /api/portfolio - fetch user holdings from DB (prices come from client-side polling)
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -59,104 +58,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ holdings: [], summary: emptySummary });
     }
 
-    // Try batch Upstox LTP if user has a connected Upstox account
-    const upstoxToken = await getUpstoxToken(userId);
-    let upstoxPrices: Map<string, { price: number; change: number; changePercent: number }> | null = null;
+    // Return holdings with invested-value metrics only (no live price fetch).
+    // Live prices are overlaid client-side via useLivePrices polling hook,
+    // which dramatically cuts initial load time.
+    const totalInvested = holdings.reduce((sum, h) => sum + h.avg_price * h.quantity, 0);
 
-    if (upstoxToken) {
-      try {
-        const symbols = holdings.map((h) => h.symbol);
-        upstoxPrices = await getUpstoxLTP(symbols, upstoxToken);
-      } catch (error) {
-        console.warn('Upstox batch LTP failed, falling back to Yahoo:', error);
-      }
-    }
-
-    // Fetch live prices for all holdings
-    const enrichedHoldings: HoldingWithMetrics[] = await Promise.all(
-      holdings.map(async (holding) => {
-        try {
-          let currentPrice: number;
-          let dayChange: number;
-          let dayChangePercent: number;
-
-          const upstoxData = upstoxPrices?.get(holding.symbol.toUpperCase());
-          if (upstoxData) {
-            currentPrice = upstoxData.price;
-            dayChange = upstoxData.change * holding.quantity;
-            dayChangePercent = upstoxData.changePercent;
-          } else {
-            const quote = await getQuote(holding.symbol, null, holding.exchange);
-            currentPrice = quote.price;
-            dayChange = quote.change * holding.quantity;
-            dayChangePercent = quote.changePercent;
-          }
-
-          const currentValue = currentPrice * holding.quantity;
-          const investedValue = holding.avg_price * holding.quantity;
-          const pnl = currentValue - investedValue;
-          const pnlPercent = investedValue > 0 ? (pnl / investedValue) * 100 : 0;
-
-          return {
-            ...holding,
-            current_price: currentPrice,
-            current_value: currentValue,
-            invested_value: investedValue,
-            pnl,
-            pnl_percent: pnlPercent,
-            day_change: dayChange,
-            day_change_percent: dayChangePercent,
-          };
-        } catch {
-          // If quote fetch fails, use avg_price as fallback
-          const investedValue = holding.avg_price * holding.quantity;
-          return {
-            ...holding,
-            current_price: holding.avg_price,
-            current_value: investedValue,
-            invested_value: investedValue,
-            pnl: 0,
-            pnl_percent: 0,
-            day_change: 0,
-            day_change_percent: 0,
-          };
-        }
-      })
-    );
-
-    // Calculate portfolio summary
-    const totalInvested = enrichedHoldings.reduce((sum, h) => sum + h.invested_value, 0);
-    const currentValue = enrichedHoldings.reduce((sum, h) => sum + h.current_value, 0);
-    const totalPnl = currentValue - totalInvested;
-    const totalPnlPercent = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
-    const dayChange = enrichedHoldings.reduce((sum, h) => sum + h.day_change, 0);
-    const dayChangePercent =
-      totalInvested > 0 ? (dayChange / totalInvested) * 100 : 0;
-
-    // Add allocation percentages
-    const holdingsWithAllocation = enrichedHoldings.map((h) => ({
-      ...h,
-      allocation_percent: currentValue > 0 ? (h.current_value / currentValue) * 100 : 0,
-    }));
-
-    // Sort for top gainers and losers
-    const sorted = [...holdingsWithAllocation].sort((a, b) => b.pnl_percent - a.pnl_percent);
-    const topGainers = sorted.filter((h) => h.pnl_percent > 0).slice(0, 5);
-    const topLosers = sorted.filter((h) => h.pnl_percent < 0).reverse().slice(0, 5);
+    const enrichedHoldings: HoldingWithMetrics[] = holdings.map((h) => {
+      const investedValue = h.avg_price * h.quantity;
+      return {
+        ...h,
+        current_price: h.avg_price,
+        current_value: investedValue,
+        invested_value: investedValue,
+        pnl: 0,
+        pnl_percent: 0,
+        day_change: 0,
+        day_change_percent: 0,
+        allocation_percent: totalInvested > 0 ? (investedValue / totalInvested) * 100 : 0,
+      };
+    });
 
     const summary: PortfolioSummary = {
       total_invested: totalInvested,
-      current_value: currentValue,
-      total_pnl: totalPnl,
-      total_pnl_percent: totalPnlPercent,
-      day_change: dayChange,
-      day_change_percent: dayChangePercent,
-      holdings_count: holdingsWithAllocation.length,
-      top_gainers: topGainers,
-      top_losers: topLosers,
+      current_value: totalInvested,
+      total_pnl: 0,
+      total_pnl_percent: 0,
+      day_change: 0,
+      day_change_percent: 0,
+      holdings_count: holdings.length,
+      top_gainers: [],
+      top_losers: [],
     };
 
-    return NextResponse.json({ holdings: holdingsWithAllocation, summary });
+    return NextResponse.json({ holdings: enrichedHoldings, summary });
   } catch (error) {
     console.error('Portfolio GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

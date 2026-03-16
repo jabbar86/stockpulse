@@ -42,6 +42,55 @@ function getMarketStatus() {
   return { isOpen, isWeekend, isHoliday };
 }
 
+// ---------------------------------------------------------------------------
+// In-memory price cache — avoids hammering Yahoo on every poll
+// ---------------------------------------------------------------------------
+const priceCache = new Map<string, PriceUpdate>();
+let cacheUpdatedAt = 0;
+let cacheTradingDate = '';
+
+function getISTDateString(): string {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
+  return ist.toISOString().split('T')[0];
+}
+
+// TTLs: 15s during market hours, 5 min after hours
+function getCacheTTL(isOpen: boolean): number {
+  return isOpen ? 15_000 : 300_000;
+}
+
+function getCachedPrices(symbols: string[], isOpen: boolean): PriceUpdate[] | null {
+  // Invalidate stale cache from previous trading day
+  const today = getISTDateString();
+  if (cacheTradingDate && cacheTradingDate !== today) {
+    priceCache.clear();
+    cacheUpdatedAt = 0;
+    cacheTradingDate = '';
+  }
+
+  if (priceCache.size === 0) return null;
+  if (Date.now() - cacheUpdatedAt > getCacheTTL(isOpen)) return null;
+
+  const results: PriceUpdate[] = [];
+  for (const sym of symbols) {
+    const key = sym.replace('.NS', '').replace('.BO', '');
+    const cached = priceCache.get(key);
+    if (cached) results.push(cached);
+  }
+  // Only use cache if we have at least half the requested symbols
+  return results.length >= symbols.length * 0.5 ? results : null;
+}
+
+function updatePriceCache(prices: PriceUpdate[]): void {
+  for (const p of prices) {
+    priceCache.set(p.symbol, p);
+  }
+  cacheUpdatedAt = Date.now();
+  cacheTradingDate = getISTDateString();
+}
+
 // Default symbols
 const DEFAULT_SYMBOLS = [
   '^NSEI', '^BSESN', '^NSEBANK',
@@ -98,7 +147,13 @@ export async function GET(request: NextRequest) {
   const market = getMarketStatus();
 
   try {
-    const prices = await fetchPrices(requestedSymbols);
+    // Serve from cache if fresh enough
+    const cached = getCachedPrices(requestedSymbols, market.isOpen);
+    const prices = cached ?? await fetchPrices(requestedSymbols);
+
+    if (!cached) {
+      updatePriceCache(prices);
+    }
 
     const message = market.isOpen
       ? undefined
@@ -116,6 +171,7 @@ export async function GET(request: NextRequest) {
         isHoliday: market.isHoliday,
         message,
       },
+      source: cached ? 'cache' : 'live',
       timestamp: Date.now(),
     });
   } catch {

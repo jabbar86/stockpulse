@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import type { PortfolioSummary, HoldingWithMetrics } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,22 +15,14 @@ import {
   WifiIcon,
   WifiOffIcon,
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import SmartInsights from '@/components/portfolio/smart-insights';
 import { useLivePrices } from '@/hooks/use-live-prices';
 
-const CHART_COLORS = [
-  '#3b82f6',
-  '#22c55e',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-  '#ec4899',
-  '#14b8a6',
-  '#f97316',
-  '#6366f1',
-  '#84cc16',
-];
+// Lazy load heavy components — Recharts (~200KB) and SmartInsights
+const AllocationChart = dynamic(() => import('@/components/portfolio/allocation-chart'), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[280px] w-full" />,
+});
+const SmartInsights = dynamic(() => import('@/components/portfolio/smart-insights'), { ssr: false });
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -345,49 +338,7 @@ export default function DashboardPage() {
             <CardTitle className="text-sm sm:text-lg">Portfolio Allocation</CardTitle>
           </CardHeader>
           <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
-            {allocationData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={allocationData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                    nameKey="name"
-                  >
-                    {allocationData.map((_, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={CHART_COLORS[index % CHART_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value) => formatCurrency(Number(value))}
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--popover))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="bottom"
-                    height={36}
-                    formatter={(value: string) => (
-                      <span className="text-[10px] sm:text-sm text-foreground">{value}</span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex h-[200px] sm:h-[280px] items-center justify-center text-xs sm:text-base text-muted-foreground">
-                No holdings to display.
-              </div>
-            )}
+            <AllocationChart data={allocationData} />
           </CardContent>
         </Card>
 
