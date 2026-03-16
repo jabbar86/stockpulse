@@ -59,20 +59,19 @@ export async function POST(
     const isPremium = profile?.is_premium === true;
     const maxAnalyses = profile?.max_ai_analyses ?? (isPremium ? 10 : 5);
 
-    // Rate limiting: 5/hr for normal users, 10/hr for premium
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    // Quota check: 5 total for free users, 10 total for premium
     const { count: analysisCount } = await serviceClient
       .from('analysis_history')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('type', 'ai')
-      .gte('created_at', oneHourAgo);
+      .eq('cached', false);
 
     if (analysisCount !== null && analysisCount >= maxAnalyses) {
       return NextResponse.json(
         {
           error: 'Rate limit exceeded',
-          message: `Maximum ${maxAnalyses} AI analyses per hour.${!isPremium ? ' Upgrade to premium for 10 analyses/hr.' : ' Please try again later.'}`,
+          message: `You have used all ${maxAnalyses} AI analyses.${!isPremium ? ' Upgrade to premium for more analyses.' : ''}`,
         },
         { status: 429 }
       );

@@ -33,7 +33,7 @@ interface ProfileData {
   is_premium: boolean;
   max_ai_analyses: number;
   created_at: string;
-  ai_analyses_used_today: number;
+  ai_analyses_used: number;
   holdings_count: number;
   broker_connections: number;
 }
@@ -246,9 +246,9 @@ export default function ProfilePage() {
                 <BrainCircuitIcon className="size-4 text-blue-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">AI Analyses Today</p>
+                <p className="text-xs text-muted-foreground">AI Analyses Used</p>
                 <p className="text-sm font-semibold">
-                  {profile.ai_analyses_used_today} / {profile.max_ai_analyses}
+                  {profile.ai_analyses_used} / {profile.max_ai_analyses}
                 </p>
               </div>
             </div>

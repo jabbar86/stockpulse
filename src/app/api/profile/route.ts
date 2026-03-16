@@ -21,15 +21,13 @@ export async function GET() {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // Count AI analyses used today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const { count: analysesToday } = await supabase
+    // Count total AI analyses used (non-cached)
+    const { count: totalAnalyses } = await supabase
       .from('analysis_history')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .eq('type', 'ai')
-      .gte('created_at', today.toISOString());
+      .eq('cached', false);
 
     // Count total holdings
     const { count: holdingsCount } = await supabase
@@ -46,7 +44,7 @@ export async function GET() {
 
     return NextResponse.json({
       ...profile,
-      ai_analyses_used_today: analysesToday || 0,
+      ai_analyses_used: totalAnalyses || 0,
       holdings_count: holdingsCount || 0,
       broker_connections: brokerCount || 0,
     });
