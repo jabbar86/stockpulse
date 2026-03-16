@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { HoldingWithMetrics } from '@/types';
+import { useLivePrices } from '@/hooks/use-live-prices';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,6 +76,40 @@ export default function PortfolioPage() {
     fetchHoldings();
   }, [fetchHoldings]);
 
+  // Live prices
+  const holdingSymbols = useMemo(
+    () => holdings.map((h) => h.symbol),
+    [holdings]
+  );
+  const { getPrice, marketStatus } = useLivePrices({
+    symbols: holdingSymbols,
+    enabled: holdingSymbols.length > 0,
+  });
+  const isMarketOpen = marketStatus.isOpen;
+
+  // Merge live prices with holdings
+  const liveHoldings = useMemo(() => {
+    if (!isMarketOpen) return holdings;
+    return holdings.map((h) => {
+      const live = getPrice(h.symbol);
+      if (!live) return h;
+      const currentPrice = live.price;
+      const currentValue = currentPrice * h.quantity;
+      const investedValue = h.avg_price * h.quantity;
+      const pnl = currentValue - investedValue;
+      const pnlPercent = investedValue > 0 ? (pnl / investedValue) * 100 : 0;
+      return {
+        ...h,
+        current_price: currentPrice,
+        current_value: currentValue,
+        pnl,
+        pnl_percent: pnlPercent,
+        day_change: live.change * h.quantity,
+        day_change_percent: live.changePercent,
+      };
+    });
+  }, [holdings, getPrice, isMarketOpen]);
+
   // Edit handlers
   const handleEditOpen = (holding: HoldingWithMetrics) => {
     setEditHolding(holding);
@@ -127,12 +162,12 @@ export default function PortfolioPage() {
     }
   };
 
-  // Portfolio totals
-  const totalValue = holdings.reduce((sum, h) => sum + h.current_value, 0);
-  const totalInvested = holdings.reduce((sum, h) => sum + h.invested_value, 0);
+  // Portfolio totals (use liveHoldings for real-time values)
+  const totalValue = liveHoldings.reduce((sum, h) => sum + h.current_value, 0);
+  const totalInvested = liveHoldings.reduce((sum, h) => sum + h.invested_value, 0);
   const totalPnl = totalValue - totalInvested;
   const totalPnlPercent = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
-  const totalDayChange = holdings.reduce((sum, h) => sum + h.day_change, 0);
+  const totalDayChange = liveHoldings.reduce((sum, h) => sum + h.day_change, 0);
   const isProfit = totalPnl >= 0;
   const pnlColor = isProfit
     ? 'text-green-600 dark:text-green-400'
@@ -167,7 +202,7 @@ export default function PortfolioPage() {
       </div>
 
       {/* Portfolio Summary Cards */}
-      {!loading && holdings.length > 0 && (
+      {!loading && liveHoldings.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-6 sm:rounded-lg sm:border sm:p-4">
           <div className="rounded-lg border p-3 sm:border-0 sm:p-0">
             <div className="flex items-center gap-1.5 sm:block">
@@ -205,7 +240,7 @@ export default function PortfolioPage() {
           </div>
           <div className="rounded-lg border p-3 sm:border-0 sm:p-0">
             <p className="text-[10px] sm:text-sm text-muted-foreground">Holdings</p>
-            <p className="text-sm sm:text-lg font-bold mt-0.5">{holdings.length}</p>
+            <p className="text-sm sm:text-lg font-bold mt-0.5">{liveHoldings.length}</p>
           </div>
         </div>
       )}
@@ -224,7 +259,7 @@ export default function PortfolioPage() {
             </div>
           ) : (
             <HoldingsTable
-              holdings={holdings}
+              holdings={liveHoldings}
               onEdit={handleEditOpen}
               onDelete={(h) => setDeleteHolding(h)}
             />

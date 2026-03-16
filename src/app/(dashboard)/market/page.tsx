@@ -29,9 +29,12 @@ import {
   ArrowUpDownIcon,
   SearchIcon,
   FilterIcon,
+  WifiIcon,
+  WifiOffIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MarketPulse from '@/components/market/market-pulse';
+import { useLivePrices, type LivePrice } from '@/hooks/use-live-prices';
 
 interface MarketItem {
   symbol: string;
@@ -74,11 +77,20 @@ function formatVolume(vol: number): string {
   return vol.toString();
 }
 
-function PriceCard({ item, onClick }: { item: MarketItem; onClick?: () => void }) {
-  const isPositive = item.change >= 0;
+function PriceCard({ item, onClick, livePrice }: { item: MarketItem; onClick?: () => void; livePrice?: LivePrice }) {
+  const price = livePrice?.price ?? item.price;
+  const change = livePrice?.change ?? item.change;
+  const changePercent = livePrice?.changePercent ?? item.changePercent;
+  const isPositive = change >= 0;
+  const flashClass = livePrice?.direction === 'up'
+    ? 'animate-flash-green'
+    : livePrice?.direction === 'down'
+    ? 'animate-flash-red'
+    : '';
+
   return (
     <Card
-      className="transition-all hover:shadow-md active:scale-[0.98] cursor-pointer"
+      className={`transition-all hover:shadow-md active:scale-[0.98] cursor-pointer ${flashClass}`}
       onClick={onClick}
     >
       <CardContent className="p-3 sm:p-5">
@@ -87,7 +99,7 @@ function PriceCard({ item, onClick }: { item: MarketItem; onClick?: () => void }
             <p className="text-xs sm:text-base font-semibold truncate">{item.name}</p>
             <div className="flex items-baseline gap-1 mt-0.5">
               <p className="text-lg sm:text-2xl font-bold tabular-nums">
-                {formatNumber(item.price)}
+                {formatNumber(price)}
               </p>
               {item.unit && (
                 <span className="text-[10px] sm:text-xs text-muted-foreground">{item.unit}</span>
@@ -109,18 +121,18 @@ function PriceCard({ item, onClick }: { item: MarketItem; onClick?: () => void }
               )}
               <span className="text-xs sm:text-base font-semibold tabular-nums">
                 {isPositive ? '+' : ''}
-                {item.changePercent.toFixed(2)}%
+                {changePercent.toFixed(2)}%
               </span>
             </div>
             <p className="text-[10px] sm:text-sm tabular-nums mt-0.5">
               {isPositive ? '+' : ''}
-              {item.change.toFixed(2)}
+              {change.toFixed(2)}
             </p>
           </div>
         </div>
-        {item.volume !== undefined && (
+        {(livePrice?.volume ?? item.volume) !== undefined && (
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1.5">
-            Vol: {formatVolume(item.volume)}
+            Vol: {formatVolume(livePrice?.volume ?? item.volume!)}
           </p>
         )}
       </CardContent>
@@ -132,15 +144,25 @@ function StockRow({
   item,
   onClick,
   rank,
+  livePrice,
 }: {
   item: MarketItem;
   onClick?: () => void;
   rank: number;
+  livePrice?: LivePrice;
 }) {
-  const isPositive = item.change >= 0;
+  const price = livePrice?.price ?? item.price;
+  const changePercent = livePrice?.changePercent ?? item.changePercent;
+  const isPositive = (livePrice?.change ?? item.change) >= 0;
+  const flashClass = livePrice?.direction === 'up'
+    ? 'animate-flash-green'
+    : livePrice?.direction === 'down'
+    ? 'animate-flash-red'
+    : '';
+
   return (
     <button
-      className="flex w-full items-center justify-between px-2 sm:px-4 py-2.5 sm:py-3.5 text-left hover:bg-muted/50 active:bg-muted/70 transition-colors rounded-lg"
+      className={`flex w-full items-center justify-between px-2 sm:px-4 py-2.5 sm:py-3.5 text-left hover:bg-muted/50 active:bg-muted/70 transition-colors rounded-lg ${flashClass}`}
       onClick={onClick}
     >
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -154,7 +176,7 @@ function StockRow({
       </div>
       <div className="text-right shrink-0">
         <p className="font-medium text-xs sm:text-base tabular-nums">
-          {formatNumber(item.price)}
+          {formatNumber(price)}
         </p>
         <p
           className={`text-[10px] sm:text-sm font-medium tabular-nums ${
@@ -164,7 +186,7 @@ function StockRow({
           }`}
         >
           {isPositive ? '+' : ''}
-          {item.changePercent.toFixed(2)}%
+          {changePercent.toFixed(2)}%
         </p>
       </div>
     </button>
@@ -174,14 +196,25 @@ function StockRow({
 function StockCard({
   item,
   onClick,
+  livePrice,
 }: {
   item: MarketItem;
   onClick?: () => void;
+  livePrice?: LivePrice;
 }) {
-  const isPositive = item.change >= 0;
+  const price = livePrice?.price ?? item.price;
+  const change = livePrice?.change ?? item.change;
+  const changePercent = livePrice?.changePercent ?? item.changePercent;
+  const isPositive = change >= 0;
+  const flashClass = livePrice?.direction === 'up'
+    ? 'animate-flash-green'
+    : livePrice?.direction === 'down'
+    ? 'animate-flash-red'
+    : '';
+
   return (
     <button
-      className="text-left p-3 sm:p-4 rounded-xl border bg-card hover:shadow-md active:scale-[0.98] transition-all group"
+      className={`text-left p-3 sm:p-4 rounded-xl border bg-card hover:shadow-md active:scale-[0.98] transition-all group ${flashClass}`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
@@ -199,10 +232,10 @@ function StockCard({
             <TrendingDownIcon className="size-3" />
           )}
           {isPositive ? '+' : ''}
-          {item.changePercent.toFixed(2)}%
+          {changePercent.toFixed(2)}%
         </span>
       </div>
-      <p className="text-lg sm:text-xl font-bold tabular-nums">{formatNumber(item.price)}</p>
+      <p className="text-lg sm:text-xl font-bold tabular-nums">{formatNumber(price)}</p>
       <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
         {item.name}
       </p>
@@ -212,7 +245,7 @@ function StockCard({
           className={`h-full rounded-full transition-all ${
             isPositive ? 'bg-green-500' : 'bg-red-500'
           }`}
-          style={{ width: `${Math.min(100, Math.abs(item.changePercent) * 15)}%` }}
+          style={{ width: `${Math.min(100, Math.abs(changePercent) * 15)}%` }}
         />
       </div>
     </button>
@@ -247,6 +280,9 @@ export default function MarketPage() {
   const [stockFilter, setStockFilter] = useState<'all' | 'gainers' | 'losers'>('all');
   const [visibleCount, setVisibleCount] = useState(12);
   const sectorScrollRef = useRef<HTMLDivElement>(null);
+
+  // Live price streaming
+  const { getPrice, connected: liveConnected, lastUpdate: liveLastUpdate, marketStatus } = useLivePrices({ enabled: autoRefresh });
 
   const fetchMarketData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -320,11 +356,41 @@ export default function MarketPage() {
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg sm:text-3xl font-bold">Market Overview</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg sm:text-3xl font-bold">Market Overview</h1>
+          {autoRefresh && (
+            marketStatus.isOpen ? (
+              <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                liveConnected
+                  ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                  : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+              }`}>
+                {liveConnected ? (
+                  <>
+                    <WifiIcon className="size-3" />
+                    <span className="hidden sm:inline">Live</span>
+                    <span className="size-1.5 rounded-full bg-green-500 animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    <WifiOffIcon className="size-3" />
+                    <span className="hidden sm:inline">Connecting...</span>
+                  </>
+                )}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                <span className="size-1.5 rounded-full bg-orange-500" />
+                <span className="hidden sm:inline">{marketStatus.message || 'Market Closed'}</span>
+                <span className="sm:hidden">Closed</span>
+              </span>
+            )
+          )}
+        </div>
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {lastUpdated && (
+          {liveLastUpdate && (
             <span className="text-[10px] sm:text-sm text-muted-foreground hidden sm:inline">
-              {lastUpdated}
+              {liveLastUpdate.toLocaleTimeString('en-IN')}
             </span>
           )}
           <Button
@@ -374,7 +440,7 @@ export default function MarketPage() {
             </div>
             <div className="grid grid-cols-2 gap-2 sm:gap-3">
               {data.indices.map((item) => (
-                <PriceCard key={item.symbol} item={item} />
+                <PriceCard key={item.symbol} item={item} livePrice={getPrice(item.symbol.replace('^', '').replace('.NS', ''))} />
               ))}
             </div>
           </section>
@@ -397,7 +463,7 @@ export default function MarketPage() {
           </div>
           <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
             {data.goldSilver.map((item) => (
-              <PriceCard key={item.symbol} item={item} />
+              <PriceCard key={item.symbol} item={item} livePrice={getPrice(item.symbol)} />
             ))}
           </div>
         </section>
@@ -425,6 +491,7 @@ export default function MarketPage() {
                       item={item}
                       rank={i + 1}
                       onClick={() => handleStockClick(item.symbol)}
+                      livePrice={getPrice(item.symbol)}
                     />
                   ))}
                 </div>
@@ -455,6 +522,7 @@ export default function MarketPage() {
                       item={item}
                       rank={i + 1}
                       onClick={() => handleStockClick(item.symbol)}
+                      livePrice={getPrice(item.symbol)}
                     />
                   ))}
                 </div>
@@ -629,6 +697,7 @@ export default function MarketPage() {
                   key={item.symbol}
                   item={item}
                   onClick={() => handleStockClick(item.symbol)}
+                  livePrice={getPrice(item.symbol)}
                 />
               ))}
             </div>

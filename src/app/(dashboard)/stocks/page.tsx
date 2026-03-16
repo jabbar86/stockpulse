@@ -59,8 +59,9 @@ export default function StocksPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, searchStocks]);
 
-  const handleStockClick = (symbol: string) => {
-    router.push(`/stocks/${symbol}`);
+  const handleStockClick = (symbol: string, exchange?: string) => {
+    const params = exchange === 'BSE' ? '?exchange=BSE' : '';
+    router.push(`/stocks/${symbol}${params}`);
   };
 
   return (
@@ -107,7 +108,7 @@ export default function StocksPage() {
                 <button
                   key={stock.symbol}
                   className="flex w-full items-center justify-between px-2 py-3 text-left hover:bg-muted/50 transition-colors rounded-lg"
-                  onClick={() => handleStockClick(stock.symbol)}
+                  onClick={() => handleStockClick(stock.symbol, stock.exchange)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">

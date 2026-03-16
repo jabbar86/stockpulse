@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 const querySchema = z.object({
   symbol: z.string().min(1).max(20),
-  period: z.enum(['1mo', '3mo', '6mo', '1y', '5y']).default('1y'),
+  period: z.enum(['1d_1m', '1d_5m', '1d_1h', '5d', '1mo', '3mo', '6mo', '1y', '5y']).default('1y'),
 });
 
 // GET /api/stocks/historical?symbol=xxx&period=1y - fetch historical price data
@@ -34,8 +34,9 @@ export async function GET(request: NextRequest) {
 
     const { symbol, period } = parsed.data;
     const upperSymbol = symbol.toUpperCase();
+    const exchange = searchParams.get('exchange') || undefined;
 
-    const data = await getHistoricalData(upperSymbol, period);
+    const data = await getHistoricalData(upperSymbol, period, exchange);
 
     return NextResponse.json({ symbol: upperSymbol, period, data });
   } catch (error) {

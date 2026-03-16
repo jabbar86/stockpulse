@@ -7,9 +7,13 @@ import type {
   HoldingWithMetrics,
 } from '@/types';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getClient(): OpenAI {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured. Add it to your .env.local file.');
+  }
+  return new OpenAI({ apiKey });
+}
 
 export async function analyzeStock(
   symbol: string,
@@ -69,19 +73,26 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
 }`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const client = getClient();
+    const response = await client.chat.completions.create({
       model: 'gpt-4o',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     });
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
+    const text = response.choices[0]?.message?.content?.trim();
+    if (!text) {
+      throw new Error('No text response from OpenAI');
     }
 
-    const parsed = JSON.parse(content) as AIAnalysis;
+    // Strip any markdown fences if present
+    let cleaned = text;
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+    }
+
+    const parsed = JSON.parse(cleaned) as AIAnalysis;
 
     if (
       !parsed.recommendation ||
@@ -149,19 +160,25 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
 }`;
 
   try {
-    const response = await openai.chat.completions.create({
+    const client = getClient();
+    const response = await client.chat.completions.create({
       model: 'gpt-4o',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     });
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) {
-      throw new Error('No response from OpenAI');
+    const text = response.choices[0]?.message?.content?.trim();
+    if (!text) {
+      throw new Error('No text response from OpenAI');
     }
 
-    const parsed = JSON.parse(content);
+    let cleaned = text;
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
+    }
+
+    const parsed = JSON.parse(cleaned);
 
     if (
       !parsed.summary ||

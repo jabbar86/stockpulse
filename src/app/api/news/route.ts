@@ -1,9 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { scrapeNews } from '@/lib/scraper/news-scraper';
+
+const SCRAPE_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
+let lastScrapeAt = 0;
+let scrapeInProgress = false;
+
+/** Check if Indian stock market is in extended hours (9 AM - 4 PM IST, Mon-Fri) */
+function isMarketHours(): boolean {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
+  const day = ist.getUTCDay();
+  if (day === 0 || day === 6) return false;
+  const totalMinutes = ist.getUTCHours() * 60 + ist.getUTCMinutes();
+  return totalMinutes >= 540 && totalMinutes <= 960; // 9:00 AM - 4:00 PM IST
+}
+
+/** Trigger a background scrape if stale and during market hours */
+function maybeScrapeInBackground() {
+  const now = Date.now();
+  if (!isMarketHours()) return;
+  if (now - lastScrapeAt < SCRAPE_INTERVAL_MS) return;
+  if (scrapeInProgress) return;
+
+  scrapeInProgress = true;
+  lastScrapeAt = now;
+
+  scrapeNews()
+    .then((result) => {
+      console.log(`[news] Background scrape done: ${result.scraped} scraped, ${result.inserted} inserted`);
+    })
+    .catch((err) => {
+      console.error('[news] Background scrape failed:', err);
+    })
+    .finally(() => {
+      scrapeInProgress = false;
+    });
+}
 
 // GET /api/news?category=...&limit=50&offset=0
 export async function GET(request: NextRequest) {
   try {
+    // Fire-and-forget: scrape fresh news in background if stale during market hours
+    maybeScrapeInBackground();
+
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
@@ -34,6 +75,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       news: data ?? [],
       total: count ?? 0,
+      lastScrapedAt: lastScrapeAt > 0 ? new Date(lastScrapeAt).toISOString() : null,
     });
   } catch (error) {
     console.error('News API error:', error);

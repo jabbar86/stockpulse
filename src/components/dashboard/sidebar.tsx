@@ -73,8 +73,11 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-sidebar-border">
-        {/* User profile */}
-        <div className="flex items-center gap-3 px-3 py-3">
+        {/* User profile — links to profile page */}
+        <Link
+          href="/profile"
+          className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-sidebar-accent transition-colors"
+        >
           <Avatar className="size-9 ring-2 ring-sidebar-primary/30">
             <AvatarFallback className="bg-sidebar-primary/20 text-sidebar-foreground text-sm font-semibold">
               {initials}
@@ -86,15 +89,8 @@ export default function Sidebar() {
               <p className="text-xs text-sidebar-foreground/50 truncate">{email}</p>
             )}
           </div>
-        </div>
-        {/* Sign out */}
-        <button
-          onClick={() => signOut()}
-          className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent w-full transition-colors mt-1"
-        >
-          <LogOut className="size-4" />
-          Sign out
-        </button>
+          <ChevronRight className="size-4 text-sidebar-foreground/30" />
+        </Link>
       </div>
     </aside>
   );

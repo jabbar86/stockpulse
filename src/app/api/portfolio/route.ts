@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
             dayChange = upstoxData.change * holding.quantity;
             dayChangePercent = upstoxData.changePercent;
           } else {
-            const quote = await getQuote(holding.symbol);
+            const quote = await getQuote(holding.symbol, null, holding.exchange);
             currentPrice = quote.price;
             dayChange = quote.change * holding.quantity;
             dayChangePercent = quote.changePercent;

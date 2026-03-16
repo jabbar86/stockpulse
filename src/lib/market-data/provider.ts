@@ -6,22 +6,71 @@ import { getFyersQuote, isFyersConfigured } from '@/lib/market-data/fyers-provid
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey', 'ripHistorical'] });
 
-type Period = '1mo' | '3mo' | '6mo' | '1y' | '5y';
+type Period = '1d_1m' | '1d_5m' | '1d_1h' | '5d' | '1mo' | '3mo' | '6mo' | '1y' | '5y';
 
 // ---------------------------------------------------------------------------
 // Symbol helpers
 // ---------------------------------------------------------------------------
 
-function formatYahooSymbol(symbol: string): string {
+// Cache: symbol -> resolved Yahoo symbol (e.g. NITINCAST -> NITINCAST.BO)
+const resolvedSymbolCache = new Map<string, string>();
+
+/**
+ * Resolve a symbol to its Yahoo Finance ticker.
+ * If exchange is known, use it directly. Otherwise, try .NS first, then .BO.
+ */
+async function resolveYahooSymbol(symbol: string, exchange?: string): Promise<string> {
+  const trimmed = symbol.trim().toUpperCase();
+  if (trimmed.endsWith('.NS') || trimmed.endsWith('.BO')) return trimmed;
+  if (exchange?.toUpperCase() === 'BSE') return `${trimmed}.BO`;
+  if (exchange?.toUpperCase() === 'NSE') return `${trimmed}.NS`;
+
+  // Check cache
+  if (resolvedSymbolCache.has(trimmed)) return resolvedSymbolCache.get(trimmed)!;
+
+  // Try NSE first
+  const nsSymbol = `${trimmed}.NS`;
+  try {
+    const result = await yahooFinance.quote(nsSymbol);
+    if (result) {
+      resolvedSymbolCache.set(trimmed, nsSymbol);
+      return nsSymbol;
+    }
+  } catch { /* not on NSE */ }
+
+  // Try BSE
+  const boSymbol = `${trimmed}.BO`;
+  try {
+    const result = await yahooFinance.quote(boSymbol);
+    if (result) {
+      resolvedSymbolCache.set(trimmed, boSymbol);
+      return boSymbol;
+    }
+  } catch { /* not on BSE either */ }
+
+  // Default to NSE if both fail
+  return nsSymbol;
+}
+
+function formatYahooSymbol(symbol: string, exchange?: string): string {
   const trimmed = symbol.trim().toUpperCase();
   if (trimmed.endsWith('.NS') || trimmed.endsWith('.BO')) {
     return trimmed;
   }
-  return `${trimmed}.NS`;
+  const suffix = exchange?.toUpperCase() === 'BSE' ? '.BO' : '.NS';
+  return `${trimmed}${suffix}`;
 }
 
-function periodToInterval(period: Period): '1d' | '1wk' | '1mo' {
+function periodToInterval(period: Period): '1m' | '5m' | '1h' | '1d' | '1wk' {
   switch (period) {
+    case '1d_1m':
+      return '1m';
+    case '1d_5m':
+      return '5m';
+    case '1d_1h':
+      return '1h';
+    case '5d':
+      return '5m';
     case '1mo':
     case '3mo':
     case '6mo':
@@ -37,6 +86,12 @@ function periodToInterval(period: Period): '1d' | '1wk' | '1mo' {
 function periodToStartDate(period: Period): Date {
   const now = new Date();
   switch (period) {
+    case '1d_1m':
+    case '1d_5m':
+    case '1d_1h':
+      return new Date(now.getTime() - 24 * 60 * 60 * 1000); // 1 day ago
+    case '5d':
+      return new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000); // 5 days ago
     case '1mo':
       return new Date(now.setMonth(now.getMonth() - 1));
     case '3mo':
@@ -48,7 +103,7 @@ function periodToStartDate(period: Period): Date {
     case '5y':
       return new Date(now.setFullYear(now.getFullYear() - 5));
     default:
-      return new Date(now.setMonth(now.getMonth() - 3));
+      return new Date(now.setMonth(now.getMonth() - 1));
   }
 }
 
@@ -69,7 +124,8 @@ interface ProviderAttempt {
  */
 export async function getQuote(
   symbol: string,
-  upstoxToken?: string | null
+  upstoxToken?: string | null,
+  exchange?: string
 ): Promise<StockQuote> {
   const providers: ProviderAttempt[] = [];
 
@@ -100,7 +156,7 @@ export async function getQuote(
   // 4. Yahoo Finance (always available, delayed)
   providers.push({
     name: 'yahoo',
-    fn: () => getYahooQuote(symbol),
+    fn: () => getYahooQuote(symbol, exchange),
   });
 
   let lastError: Error | null = null;
@@ -121,8 +177,11 @@ export async function getQuote(
 /**
  * Yahoo Finance quote (internal — final fallback)
  */
-async function getYahooQuote(symbol: string): Promise<StockQuote> {
-  const yahooSymbol = formatYahooSymbol(symbol);
+async function getYahooQuote(symbol: string, exchange?: string): Promise<StockQuote> {
+  // If exchange is known, use it directly; otherwise resolve (.NS or .BO)
+  const yahooSymbol = exchange
+    ? formatYahooSymbol(symbol, exchange)
+    : await resolveYahooSymbol(symbol);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result: any = await yahooFinance.quote(yahooSymbol);
 
@@ -153,21 +212,41 @@ async function getYahooQuote(symbol: string): Promise<StockQuote> {
 // Backward compat
 export async function getQuoteWithUpstox(
   symbol: string,
-  upstoxToken?: string | null
+  upstoxToken?: string | null,
+  exchange?: string
 ): Promise<StockQuote> {
-  return getQuote(symbol, upstoxToken);
+  return getQuote(symbol, upstoxToken, exchange);
 }
 
 // ---------------------------------------------------------------------------
 // Historical data (Yahoo only — brokers don't provide free historical)
 // ---------------------------------------------------------------------------
 
+// In-memory cache for historical data: "SYMBOL:period" -> { data, fetchedAt }
+const historicalCache = new Map<string, { data: HistoricalDataPoint[]; fetchedAt: number }>();
+
+// Cache TTL: intraday 2 min, daily 10 min
+function getHistoricalCacheTtl(period: Period): number {
+  if (['1d_1m', '1d_5m', '1d_1h', '5d'].includes(period)) return 2 * 60 * 1000;
+  return 10 * 60 * 1000;
+}
+
 export async function getHistoricalData(
   symbol: string,
-  period: Period = '3mo'
+  period: Period = '3mo',
+  exchange?: string
 ): Promise<HistoricalDataPoint[]> {
+  const cacheKey = `${symbol.toUpperCase()}:${period}:${exchange || ''}`;
+  const ttl = getHistoricalCacheTtl(period);
+  const cached = historicalCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < ttl) {
+    return cached.data;
+  }
+
   try {
-    const yahooSymbol = formatYahooSymbol(symbol);
+    const yahooSymbol = exchange
+      ? formatYahooSymbol(symbol, exchange)
+      : await resolveYahooSymbol(symbol);
     const startDate = periodToStartDate(period);
     const endDate = new Date();
     const interval = periodToInterval(period);
@@ -179,23 +258,31 @@ export async function getHistoricalData(
       interval,
     });
 
+    const isIntraday = ['1d_1m', '1d_5m', '1d_1h', '5d'].includes(period);
     const quotes = result?.quotes || [];
     const seen = new Set<string>();
-    return quotes
+    const data = quotes
       .filter((row: any) => row.date)
-      .map((row: any) => ({
-        date: new Date(row.date).toISOString().split('T')[0],
-        open: row.open ?? 0,
-        high: row.high ?? 0,
-        low: row.low ?? 0,
-        close: row.close ?? 0,
-        volume: row.volume ?? 0,
-      }))
+      .map((row: any) => {
+        const d = new Date(row.date);
+        const dateStr = isIntraday ? d.toISOString() : d.toISOString().split('T')[0];
+        return {
+          date: dateStr,
+          open: row.open ?? 0,
+          high: row.high ?? 0,
+          low: row.low ?? 0,
+          close: row.close ?? 0,
+          volume: row.volume ?? 0,
+        };
+      })
       .filter((row: HistoricalDataPoint) => {
         if (seen.has(row.date)) return false;
         seen.add(row.date);
         return true;
       });
+
+    historicalCache.set(cacheKey, { data, fetchedAt: Date.now() });
+    return data;
   } catch (error) {
     throw new Error(
       `Failed to fetch historical data for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`

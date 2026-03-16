@@ -10,24 +10,20 @@ import { getUpstoxToken } from '@/lib/brokers/upstox-token';
  */
 function isMarketHours(): boolean {
   const now = new Date();
-
-  // Convert to IST
   const istOffset = 5.5 * 60 * 60 * 1000;
   const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
 
   const day = ist.getUTCDay();
-  // Weekend check (0 = Sunday, 6 = Saturday)
   if (day === 0 || day === 6) return false;
 
   const hours = ist.getUTCHours();
   const minutes = ist.getUTCMinutes();
   const totalMinutes = hours * 60 + minutes;
 
-  // Market hours: 9:15 (555 min) to 15:30 (930 min)
   return totalMinutes >= 555 && totalMinutes <= 930;
 }
 
-// GET /api/stocks/[symbol]/analysis - fetch quote, historical data, and technical indicators
+// GET /api/stocks/[symbol]/analysis - fetch quote and technical indicators
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ symbol: string }> }
@@ -49,24 +45,12 @@ export async function GET(
 
     const upperSymbol = symbol.toUpperCase();
     const serviceClient = createServiceRoleClient();
-
-    // Map UI period to yahoo-finance period
     const { searchParams } = new URL(request.url);
-    const uiPeriod = searchParams.get('period') || '3M';
-    const periodMap: Record<string, '1mo' | '3mo' | '6mo' | '1y'> = {
-      '1M': '1mo',
-      '3M': '3mo',
-      '6M': '6mo',
-      '1Y': '1y',
-    };
-    const yahooPeriod = periodMap[uiPeriod] || '3mo';
+    const exchange = searchParams.get('exchange') || undefined;
 
-    // Check cache first (only for quote + technical, not historical which varies by period)
+    // Check cache first
     const ttlMinutes = isMarketHours() ? 30 : 1440;
     const cacheThreshold = new Date(Date.now() - ttlMinutes * 60 * 1000).toISOString();
-
-    let quote;
-    let technical;
 
     const { data: cached } = await serviceClient
       .from('analysis_cache')
@@ -79,46 +63,49 @@ export async function GET(
       .single();
 
     if (cached?.data) {
-      quote = (cached.data as any).quote;
-      technical = (cached.data as any).technical;
+      const { quote, technical } = cached.data as any;
+      return NextResponse.json({
+        symbol: upperSymbol,
+        name: quote.name,
+        current_price: quote.price,
+        quote,
+        technical,
+        recommendation: technical.overallSignal,
+        confidence: Math.abs(technical.score),
+        analyzed_at: cached.created_at,
+      });
     }
 
-    // Fetch fresh quote + technical if not cached
-    if (!quote || !technical) {
-      const upstoxToken = await getUpstoxToken(userId);
-      const historicalForTechnical = await getHistoricalData(upperSymbol, '1y');
-      quote = await getQuoteWithUpstox(upperSymbol, upstoxToken);
-      technical = calculateTechnicalIndicators(historicalForTechnical);
+    // Cache miss — fetch quote and historical data in parallel
+    const upstoxToken = await getUpstoxToken(userId);
+    const [quote, historicalForTechnical] = await Promise.all([
+      getQuoteWithUpstox(upperSymbol, upstoxToken, exchange),
+      getHistoricalData(upperSymbol, '1y', exchange),
+    ]);
 
-      // Cache the technical data
-      await serviceClient.from('analysis_cache').upsert(
-        {
-          symbol: upperSymbol,
-          type: 'technical',
-          data: { quote, technical },
-          created_at: new Date().toISOString(),
-        },
-        { onConflict: 'symbol,type' }
-      );
-    }
+    const technical = calculateTechnicalIndicators(historicalForTechnical);
 
-    // Always fetch historical data for the requested period (not cached since period varies)
-    const historicalData = await getHistoricalData(upperSymbol, yahooPeriod);
+    // Cache the result (don't await — fire and forget)
+    serviceClient.from('analysis_cache').upsert(
+      {
+        symbol: upperSymbol,
+        type: 'technical',
+        data: { quote, technical },
+        created_at: new Date().toISOString(),
+      },
+      { onConflict: 'symbol,type' }
+    ).then(() => {});
 
-    // Return in the CombinedAnalysis-like shape the frontend expects
-    const result = {
+    return NextResponse.json({
       symbol: upperSymbol,
       name: quote.name,
       current_price: quote.price,
       quote,
       technical,
-      historicalData,
       recommendation: technical.overallSignal,
       confidence: Math.abs(technical.score),
       analyzed_at: new Date().toISOString(),
-    };
-
-    return NextResponse.json(result);
+    });
   } catch (error) {
     console.error('Stock analysis error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -3,8 +3,7 @@
 import { useAuth } from '@/lib/auth/session-provider';
 import { usePathname } from 'next/navigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { LineChart, LogOut } from 'lucide-react';
+import { LineChart } from 'lucide-react';
 import Link from 'next/link';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -13,10 +12,11 @@ const PAGE_TITLES: Record<string, string> = {
   '/portfolio': 'Portfolio',
   '/stocks': 'Stocks',
   '/brokers': 'Connect',
+  '/profile': 'Profile',
 };
 
 export default function Header() {
-  const { profile, signOut } = useAuth();
+  const { profile } = useAuth();
   const pathname = usePathname();
   const name = profile?.name || 'User';
   const initials = name
@@ -58,21 +58,12 @@ export default function Header() {
         </p>
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-2">
-        {/* Mobile sign out */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8 md:hidden"
-          onClick={() => signOut()}
-        >
-          <LogOut className="size-4 text-muted-foreground" />
-        </Button>
-        <Avatar className="size-8 md:size-9">
+      {/* Right side — avatar links to profile */}
+      <Link href="/profile" className="flex items-center">
+        <Avatar className="size-8 md:size-9 ring-2 ring-transparent hover:ring-primary/30 transition-all">
           <AvatarFallback className="text-[10px] md:text-xs font-medium">{initials}</AvatarFallback>
         </Avatar>
-      </div>
+      </Link>
     </header>
   );
 }

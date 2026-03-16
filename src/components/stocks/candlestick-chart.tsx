@@ -7,6 +7,8 @@ type ChartType = 'candlestick' | 'line' | 'bar';
 
 interface StockChartProps {
   data: HistoricalDataPoint[];
+  livePrice?: number;
+  liveVolume?: number;
 }
 
 function resolveColor(cssVar: string, alpha?: number) {
@@ -17,7 +19,7 @@ function resolveColor(cssVar: string, alpha?: number) {
   document.body.removeChild(el);
   const match = computed.match(/[\d.]+/g);
   if (!match) return alpha !== undefined ? 'rgba(128,128,128,0.3)' : '#888888';
-  const [r, g, b] = match.map(Number);
+  const [r, g, b] = match.map((v) => Math.round(Number(v)));
   if (alpha !== undefined) return `rgba(${r},${g},${b},${alpha})`;
   return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }
@@ -44,36 +46,66 @@ interface TooltipData {
   changePercent: number;
 }
 
-export default function CandlestickChart({ data }: StockChartProps) {
+export default function CandlestickChart({ data, livePrice, liveVolume }: StockChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof import('lightweight-charts').createChart> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mainSeriesRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const volSeriesRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [chartType, setChartType] = useState<ChartType>('candlestick');
+  const [chartType, setChartType] = useState<ChartType>('line');
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 
-  // Build a date->data lookup
+  // Detect if data is intraday (dates contain 'T' for ISO timestamps)
+  const isIntraday = data.length > 0 && data[0].date.includes('T');
+
+  // IST offset in seconds (+5:30)
+  const IST_OFFSET = 5.5 * 60 * 60;
+
+  // Convert date to lightweight-charts time format
+  // lightweight-charts renders UTC, so we add IST offset to show correct Indian time on axis
+  const toTime = useCallback((dateStr: string): import('lightweight-charts').Time => {
+    if (dateStr.includes('T')) {
+      return (Math.floor(new Date(dateStr).getTime() / 1000) + IST_OFFSET) as unknown as import('lightweight-charts').Time;
+    }
+    return dateStr as unknown as import('lightweight-charts').Time;
+  }, []);
+
+  // Build a date->data lookup (use IST-offset Unix timestamp as key for intraday)
   const dataMap = useRef(new Map<string, HistoricalDataPoint>());
   useEffect(() => {
     const map = new Map<string, HistoricalDataPoint>();
-    data.forEach((d) => map.set(d.date, d));
+    data.forEach((d) => {
+      if (d.date.includes('T')) {
+        const ts = (Math.floor(new Date(d.date).getTime() / 1000) + IST_OFFSET).toString();
+        map.set(ts, d);
+      } else {
+        map.set(d.date, d);
+      }
+    });
     dataMap.current = map;
   }, [data]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleCrosshairMove = useCallback((param: any) => {
     if (!param?.time) {
       setTooltip(null);
       return;
     }
-    const dateStr = param.time as string;
-    const d = dataMap.current.get(dateStr);
+    const key = typeof param.time === 'number' ? param.time.toString() : (param.time as string);
+    const d = dataMap.current.get(key);
     if (!d) {
       setTooltip(null);
       return;
     }
     const change = d.close - d.open;
     const changePercent = d.open !== 0 ? (change / d.open) * 100 : 0;
+    const displayDate = d.date.includes('T')
+      ? new Date(d.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })
+      : d.date;
     setTooltip({
-      date: dateStr,
+      date: displayDate,
       open: d.open,
       high: d.high,
       low: d.low,
@@ -94,7 +126,7 @@ export default function CandlestickChart({ data }: StockChartProps) {
         createChart,
         CandlestickSeries,
         BarSeries,
-        LineSeries,
+        AreaSeries,
         HistogramSeries,
         ColorType,
         CrosshairMode,
@@ -125,7 +157,7 @@ export default function CandlestickChart({ data }: StockChartProps) {
           horzLines: { color: gridColor },
         },
         crosshair: {
-          mode: CrosshairMode.Normal,
+          mode: chartType === 'line' ? CrosshairMode.Magnet : CrosshairMode.Normal,
           vertLine: {
             labelBackgroundColor: '#3b82f6',
           },
@@ -134,7 +166,7 @@ export default function CandlestickChart({ data }: StockChartProps) {
           },
         },
         rightPriceScale: { borderColor },
-        timeScale: { borderColor, timeVisible: false },
+        timeScale: { borderColor, timeVisible: isIntraday, secondsVisible: false },
       });
 
       chartRef.current = chart;
@@ -153,24 +185,32 @@ export default function CandlestickChart({ data }: StockChartProps) {
         });
         series.setData(
           data.map((d) => ({
-            time: d.date as unknown as import('lightweight-charts').Time,
+            time: toTime(d.date),
             open: d.open,
             high: d.high,
             low: d.low,
             close: d.close,
           }))
         );
+        mainSeriesRef.current = series;
       } else if (chartType === 'line') {
-        const series = chart.addSeries(LineSeries, {
-          color: '#3b82f6',
+        const series = chart.addSeries(AreaSeries, {
+          lineColor: '#3b82f6',
           lineWidth: 2,
+          topColor: 'rgba(59,130,246,0.3)',
+          bottomColor: 'rgba(59,130,246,0.02)',
+          crosshairMarkerVisible: true,
+          crosshairMarkerRadius: 5,
+          crosshairMarkerBorderColor: '#3b82f6',
+          crosshairMarkerBackgroundColor: '#ffffff',
         });
         series.setData(
           data.map((d) => ({
-            time: d.date as unknown as import('lightweight-charts').Time,
+            time: toTime(d.date),
             value: d.close,
           }))
         );
+        mainSeriesRef.current = series;
       } else if (chartType === 'bar') {
         const series = chart.addSeries(BarSeries, {
           upColor: '#22c55e',
@@ -178,23 +218,18 @@ export default function CandlestickChart({ data }: StockChartProps) {
         });
         series.setData(
           data.map((d) => ({
-            time: d.date as unknown as import('lightweight-charts').Time,
+            time: toTime(d.date),
             open: d.open,
             high: d.high,
             low: d.low,
             close: d.close,
           }))
         );
+        mainSeriesRef.current = series;
       }
 
-      // Buy volume (close >= open) and Sell volume (close < open) as separate series
-      const buyVolSeries = chart.addSeries(HistogramSeries, {
-        color: 'rgba(34,197,94,0.5)',
-        priceFormat: { type: 'volume' },
-        priceScaleId: 'volume',
-      });
-      const sellVolSeries = chart.addSeries(HistogramSeries, {
-        color: 'rgba(239,68,68,0.5)',
+      // Volume histogram with per-bar buy/sell colors
+      const volSeries = chart.addSeries(HistogramSeries, {
         priceFormat: { type: 'volume' },
         priceScaleId: 'volume',
       });
@@ -203,21 +238,14 @@ export default function CandlestickChart({ data }: StockChartProps) {
         scaleMargins: { top: 0.75, bottom: 0 },
       });
 
-      buyVolSeries.setData(
+      volSeries.setData(
         data.map((d) => ({
-          time: d.date as unknown as import('lightweight-charts').Time,
-          value: d.close >= d.open ? d.volume : 0,
-          color: 'rgba(34,197,94,0.5)',
+          time: toTime(d.date),
+          value: d.volume,
+          color: d.close >= d.open ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)',
         }))
       );
-
-      sellVolSeries.setData(
-        data.map((d) => ({
-          time: d.date as unknown as import('lightweight-charts').Time,
-          value: d.close < d.open ? d.volume : 0,
-          color: 'rgba(239,68,68,0.5)',
-        }))
-      );
+      volSeriesRef.current = volSeries;
 
       chart.timeScale().fitContent();
       setIsLoaded(true);
@@ -239,6 +267,8 @@ export default function CandlestickChart({ data }: StockChartProps) {
 
     return () => {
       isMounted = false;
+      mainSeriesRef.current = null;
+      volSeriesRef.current = null;
       if (chartRef.current) {
         chartRef.current.remove();
         chartRef.current = null;
@@ -246,15 +276,76 @@ export default function CandlestickChart({ data }: StockChartProps) {
     };
   }, [data, chartType, handleCrosshairMove]);
 
+  // Live price update — push new tick onto chart without re-rendering
+  const lastLiveTimeRef = useRef<import('lightweight-charts').Time | null>(null);
+  useEffect(() => {
+    if (!livePrice || !mainSeriesRef.current || !isLoaded || data.length === 0) return;
+
+    const now = (Math.floor(Date.now() / 1000) + IST_OFFSET) as unknown as import('lightweight-charts').Time;
+    const lastData = data[data.length - 1];
+    const open = lastData.close; // use last historical close as the "open" for live bar
+
+    if (chartType === 'line') {
+      mainSeriesRef.current.update({
+        time: now,
+        value: livePrice,
+      });
+    } else {
+      // For candlestick/bar — update the live bar
+      const prevHigh = lastLiveTimeRef.current === now ? undefined : open;
+      const prevLow = lastLiveTimeRef.current === now ? undefined : open;
+      mainSeriesRef.current.update({
+        time: now,
+        open,
+        high: Math.max(prevHigh ?? livePrice, livePrice),
+        low: Math.min(prevLow ?? livePrice, livePrice),
+        close: livePrice,
+      });
+    }
+
+    // Update volume bar
+    if (volSeriesRef.current) {
+      volSeriesRef.current.update({
+        time: now,
+        value: liveVolume ?? 0,
+        color: livePrice >= open ? 'rgba(34,197,94,0.5)' : 'rgba(239,68,68,0.5)',
+      });
+    }
+
+    // Update dataMap for tooltip
+    const key = (now as unknown as number).toString();
+    dataMap.current.set(key, {
+      date: new Date().toISOString(),
+      open,
+      high: Math.max(open, livePrice),
+      low: Math.min(open, livePrice),
+      close: livePrice,
+      volume: liveVolume ?? 0,
+    });
+
+    lastLiveTimeRef.current = now;
+  }, [livePrice, liveVolume, isLoaded, chartType, data]);
+
   const types: { value: ChartType; label: string }[] = [
-    { value: 'candlestick', label: 'Candles' },
     { value: 'line', label: 'Line' },
+    { value: 'candlestick', label: 'Candles' },
     { value: 'bar', label: 'OHLC' },
   ];
 
-  // Last data point for default display
+  // Last data point for default display — prefer live price
   const lastPoint = data.length > 0 ? data[data.length - 1] : null;
-  const display = tooltip || (lastPoint ? {
+  const liveDisplay = livePrice && lastPoint ? {
+    date: new Date().toISOString(),
+    open: lastPoint.close,
+    high: Math.max(lastPoint.close, livePrice),
+    low: Math.min(lastPoint.close, livePrice),
+    close: livePrice,
+    volume: liveVolume ?? lastPoint.volume,
+    change: livePrice - lastPoint.close,
+    changePercent: lastPoint.close !== 0 ? ((livePrice - lastPoint.close) / lastPoint.close) * 100 : 0,
+  } : null;
+
+  const display = tooltip || liveDisplay || (lastPoint ? {
     date: lastPoint.date,
     open: lastPoint.open,
     high: lastPoint.high,
@@ -291,7 +382,7 @@ export default function CandlestickChart({ data }: StockChartProps) {
         {display && (
           <div className="flex items-center gap-3 text-xs flex-wrap">
             <span className="text-muted-foreground">
-              {new Date(display.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+              {new Date(display.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })}
             </span>
             <span>O <span className="font-medium">{formatPrice(display.open)}</span></span>
             <span>H <span className="font-medium text-green-600 dark:text-green-400">{formatPrice(display.high)}</span></span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,19 @@ function timeAgo(dateStr: string): string {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
+
+function isMarketOpen(): boolean {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
+  const day = ist.getUTCDay();
+  if (day === 0 || day === 6) return false;
+  const totalMinutes = ist.getUTCHours() * 60 + ist.getUTCMinutes();
+  // Refresh from 9:00 AM to 4:00 PM IST (slightly wider than trading hours for post-market news)
+  return totalMinutes >= 540 && totalMinutes <= 960;
+}
+
 export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -75,6 +88,8 @@ export default function NewsPage() {
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
   const [offset, setOffset] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const LIMIT = 30;
 
   const fetchNews = useCallback(async (cat: string, off: number, append: boolean) => {
@@ -92,6 +107,8 @@ export default function NewsPage() {
         setNews(data.news || []);
       }
       setTotal(data.total || 0);
+      if (data.lastScrapedAt) setLastRefresh(new Date(data.lastScrapedAt));
+      else setLastRefresh(new Date());
     } catch (err) {
       console.error('Failed to fetch news:', err);
     } finally {
@@ -103,6 +120,23 @@ export default function NewsPage() {
   useEffect(() => {
     setOffset(0);
     fetchNews(category, 0, false);
+  }, [category, fetchNews]);
+
+  // Auto-refresh during market hours every 30 minutes
+  useEffect(() => {
+    function startAutoRefresh() {
+      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+      autoRefreshRef.current = setInterval(() => {
+        if (isMarketOpen()) {
+          fetchNews(category, 0, false);
+        }
+      }, AUTO_REFRESH_MS);
+    }
+
+    startAutoRefresh();
+    return () => {
+      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    };
   }, [category, fetchNews]);
 
   function handleLoadMore() {
@@ -129,6 +163,11 @@ export default function NewsPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Latest Indian stock market headlines
+            {isMarketOpen() && (
+              <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+                · Auto-refreshes every 30 min
+              </span>
+            )}
           </p>
         </div>
         <Button

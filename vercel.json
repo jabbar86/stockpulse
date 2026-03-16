@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/scrape-news",
+      "schedule": "47 1,13 * * *"
+    }
+  ]
+}

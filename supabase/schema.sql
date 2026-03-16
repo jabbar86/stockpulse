@@ -8,6 +8,8 @@ create table if not exists profiles (
   id uuid references auth.users(id) on delete cascade primary key,
   email text unique not null,
   name text not null default '',
+  is_premium boolean not null default false,
+  max_ai_analyses integer not null default 5,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { PortfolioSummary, HoldingWithMetrics } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +11,12 @@ import {
   TrendingDownIcon,
   SunriseIcon,
   LayersIcon,
+  WifiIcon,
+  WifiOffIcon,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import SmartInsights from '@/components/portfolio/smart-insights';
+import { useLivePrices } from '@/hooks/use-live-prices';
 
 const CHART_COLORS = [
   '#3b82f6',
@@ -46,6 +49,17 @@ export default function DashboardPage() {
   const [holdings, setHoldings] = useState<HoldingWithMetrics[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Get portfolio holding symbols for live streaming
+  const holdingSymbols = useMemo(
+    () => holdings.map((h) => h.symbol),
+    [holdings]
+  );
+
+  const { getPrice, connected: liveConnected, lastUpdate: liveLastUpdate, marketStatus } = useLivePrices({
+    symbols: holdingSymbols,
+    enabled: holdingSymbols.length > 0,
+  });
+
   useEffect(() => {
     async function fetchPortfolio() {
       try {
@@ -64,7 +78,52 @@ export default function DashboardPage() {
     fetchPortfolio();
   }, []);
 
-  const allocationData = holdings.map((h) => ({
+  // Merge live prices with holdings for real-time updates
+  const liveHoldings = useMemo(() => {
+    return holdings.map((h) => {
+      const live = getPrice(h.symbol);
+      if (!live) return h;
+      const currentPrice = live.price;
+      const currentValue = currentPrice * h.quantity;
+      const investedValue = h.avg_price * h.quantity;
+      const pnl = currentValue - investedValue;
+      const pnlPercent = investedValue > 0 ? (pnl / investedValue) * 100 : 0;
+      return {
+        ...h,
+        current_price: currentPrice,
+        current_value: currentValue,
+        pnl,
+        pnl_percent: pnlPercent,
+        day_change: live.change * h.quantity,
+        day_change_percent: live.changePercent,
+        _direction: live.direction,
+      };
+    });
+  }, [holdings, getPrice]);
+
+  // Recompute summary from live holdings
+  const liveSummary = useMemo(() => {
+    if (!summary || liveHoldings.length === 0) return summary;
+    const totalInvested = liveHoldings.reduce((sum, h) => sum + (h.avg_price * h.quantity), 0);
+    const currentValue = liveHoldings.reduce((sum, h) => sum + h.current_value, 0);
+    const totalPnl = currentValue - totalInvested;
+    const totalPnlPercent = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
+    const dayChange = liveHoldings.reduce((sum, h) => sum + h.day_change, 0);
+    const dayChangePercent = totalInvested > 0 ? (dayChange / totalInvested) * 100 : 0;
+    const sorted = [...liveHoldings].sort((a, b) => b.pnl_percent - a.pnl_percent);
+    return {
+      ...summary,
+      current_value: currentValue,
+      total_pnl: totalPnl,
+      total_pnl_percent: totalPnlPercent,
+      day_change: dayChange,
+      day_change_percent: dayChangePercent,
+      top_gainers: sorted.filter((h) => h.pnl_percent > 0).slice(0, 5),
+      top_losers: sorted.filter((h) => h.pnl_percent < 0).reverse().slice(0, 5),
+    };
+  }, [summary, liveHoldings]);
+
+  const allocationData = liveHoldings.map((h) => ({
     name: h.symbol,
     value: h.current_value,
   }));
@@ -107,30 +166,31 @@ export default function DashboardPage() {
     );
   }
 
+  const s = liveSummary;
   const summaryCards = [
     {
       title: 'Total Value',
-      value: summary ? formatCurrency(summary.current_value) : '--',
-      subtitle: summary ? `Invested: ${formatCurrency(summary.total_invested)}` : '',
+      value: s ? formatCurrency(s.current_value) : '--',
+      subtitle: s ? `Invested: ${formatCurrency(s.total_invested)}` : '',
       icon: WalletIcon,
     },
     {
       title: 'Total P&L',
-      value: summary ? formatCurrency(summary.total_pnl) : '--',
-      subtitle: summary ? formatPercent(summary.total_pnl_percent) : '',
-      icon: summary && summary.total_pnl >= 0 ? TrendingUpIcon : TrendingDownIcon,
-      positive: summary ? summary.total_pnl >= 0 : true,
+      value: s ? formatCurrency(s.total_pnl) : '--',
+      subtitle: s ? formatPercent(s.total_pnl_percent) : '',
+      icon: s && s.total_pnl >= 0 ? TrendingUpIcon : TrendingDownIcon,
+      positive: s ? s.total_pnl >= 0 : true,
     },
     {
       title: 'Day Change',
-      value: summary ? formatCurrency(summary.day_change) : '--',
-      subtitle: summary ? formatPercent(summary.day_change_percent) : '',
+      value: s ? formatCurrency(s.day_change) : '--',
+      subtitle: s ? formatPercent(s.day_change_percent) : '',
       icon: SunriseIcon,
-      positive: summary ? summary.day_change >= 0 : true,
+      positive: s ? s.day_change >= 0 : true,
     },
     {
       title: 'Holdings',
-      value: summary ? String(summary.holdings_count) : '0',
+      value: s ? String(s.holdings_count) : '0',
       subtitle: 'Stocks in portfolio',
       icon: LayersIcon,
     },
@@ -138,7 +198,42 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <h1 className="text-lg sm:text-3xl font-bold">Dashboard</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-lg sm:text-3xl font-bold">Dashboard</h1>
+        {holdingSymbols.length > 0 && (
+          marketStatus.isOpen ? (
+            <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full ${
+              liveConnected
+                ? 'bg-green-500/10 text-green-600 dark:text-green-400'
+                : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+            }`}>
+              {liveConnected ? (
+                <>
+                  <WifiIcon className="size-3" />
+                  <span className="hidden sm:inline">Live</span>
+                  <span className="size-1.5 rounded-full bg-green-500 animate-pulse" />
+                </>
+              ) : (
+                <>
+                  <WifiOffIcon className="size-3" />
+                  <span className="hidden sm:inline">Connecting...</span>
+                </>
+              )}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400">
+              <span className="size-1.5 rounded-full bg-orange-500" />
+              <span className="hidden sm:inline">{marketStatus.message || 'Market Closed'}</span>
+              <span className="sm:hidden">Closed</span>
+            </span>
+          )
+        )}
+        {liveLastUpdate && (
+          <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline ml-auto">
+            Updated: {liveLastUpdate.toLocaleTimeString('en-IN')}
+          </span>
+        )}
+      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
@@ -177,10 +272,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Smart Insights */}
-      {holdings.length > 0 && <SmartInsights holdings={holdings} />}
+      {liveHoldings.length > 0 && <SmartInsights holdings={liveHoldings} />}
 
       {/* Holdings Overview */}
-      {holdings.length > 0 && (
+      {liveHoldings.length > 0 && (
         <Card>
           <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-5 pb-2">
             <CardTitle className="text-sm sm:text-lg">Holdings Overview</CardTitle>
@@ -199,15 +294,20 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...holdings]
+                  {[...liveHoldings]
                     .sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl))
                     .map((h) => {
                       const isPositive = h.pnl >= 0;
                       const color = isPositive
                         ? 'text-green-600 dark:text-green-400'
                         : 'text-red-600 dark:text-red-400';
+                      const flashClass = (h as any)._direction === 'up'
+                        ? 'animate-flash-green'
+                        : (h as any)._direction === 'down'
+                        ? 'animate-flash-red'
+                        : '';
                       return (
-                        <tr key={h.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <tr key={h.id} className={`border-b last:border-0 hover:bg-muted/30 transition-colors ${flashClass}`}>
                           <td className="px-3 sm:px-4 py-2.5 sm:py-3">
                             <p className="font-medium text-xs sm:text-sm">{h.symbol}</p>
                             <p className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[80px] sm:max-w-[160px]">{h.name}</p>
@@ -302,9 +402,9 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-2 sm:px-6 pb-2 sm:pb-6">
-              {summary && summary.top_gainers.length > 0 ? (
+              {s && s.top_gainers.length > 0 ? (
                 <div className="space-y-1.5 sm:space-y-2">
-                  {summary.top_gainers.slice(0, 3).map((stock) => (
+                  {s.top_gainers.slice(0, 3).map((stock) => (
                     <div
                       key={stock.symbol}
                       className="flex items-center justify-between rounded-lg border p-2.5 sm:p-4"
@@ -341,9 +441,9 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-2 sm:px-6 pb-2 sm:pb-6">
-              {summary && summary.top_losers.length > 0 ? (
+              {s && s.top_losers.length > 0 ? (
                 <div className="space-y-1.5 sm:space-y-2">
-                  {summary.top_losers.slice(0, 3).map((stock) => (
+                  {s.top_losers.slice(0, 3).map((stock) => (
                     <div
                       key={stock.symbol}
                       className="flex items-center justify-between rounded-lg border p-2.5 sm:p-4"
