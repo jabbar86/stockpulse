@@ -1,6 +1,9 @@
 import { NextRequest } from 'next/server';
 import YahooFinance from 'yahoo-finance2';
 
+// Vercel Hobby plan: max 60s for streaming functions
+export const maxDuration = 60;
+
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 // Symbols to stream — indices + top traded stocks
@@ -196,6 +199,8 @@ export async function GET(request: NextRequest) {
   // ─── Market is OPEN: stream live prices ───
   let isActive = true;
   let controllerClosed = false;
+  const streamStartedAt = Date.now();
+  const MAX_STREAM_MS = 55000; // Close before 60s Vercel timeout to allow clean reconnect
 
   // Safe enqueue — silently no-ops if controller is closed
   function safeSend(controller: ReadableStreamDefaultController, message: string): boolean {
@@ -243,6 +248,12 @@ export async function GET(request: NextRequest) {
       // Recurring push
       async function push() {
         if (!isActive) return;
+
+        // Close stream before Vercel timeout to allow clean reconnect
+        if (Date.now() - streamStartedAt > MAX_STREAM_MS) {
+          safeClose(controller);
+          return;
+        }
 
         // Check if market just closed
         const currentStatus = getMarketStatus();
