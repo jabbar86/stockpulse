@@ -81,15 +81,13 @@ export default function PortfolioPage() {
     () => holdings.map((h) => h.symbol),
     [holdings]
   );
-  const { getPrice, marketStatus } = useLivePrices({
+  const { getPrice } = useLivePrices({
     symbols: holdingSymbols,
     enabled: holdingSymbols.length > 0,
   });
-  const isMarketOpen = marketStatus.isOpen;
 
-  // Merge live prices with holdings
+  // Merge live prices with holdings (always merge, even after hours for last-known prices)
   const liveHoldings = useMemo(() => {
-    if (!isMarketOpen) return holdings;
     return holdings.map((h) => {
       const live = getPrice(h.symbol);
       if (!live) return h;
@@ -108,7 +106,7 @@ export default function PortfolioPage() {
         day_change_percent: live.changePercent,
       };
     });
-  }, [holdings, getPrice, isMarketOpen]);
+  }, [holdings, getPrice]);
 
   // Edit handlers
   const handleEditOpen = (holding: HoldingWithMetrics) => {
