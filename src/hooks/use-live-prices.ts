@@ -33,31 +33,28 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
   const [prices, setPrices] = useState<Map<string, LivePrice>>(new Map());
   const [connected, setConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [marketStatus, setMarketStatus] = useState<MarketStatus>({ isOpen: true });
+  const [marketStatus, setMarketStatus] = useState<MarketStatus>({ isOpen: false });
   const prevPricesRef = useRef<Map<string, number>>(new Map());
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mountedRef = useRef(true);
-  const fetchingRef = useRef(false);
-  const initialFetchDone = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const symbolsKeyRef = useRef('');
 
-  const fetchPrices = useCallback(async () => {
-    if (!enabled || fetchingRef.current) return;
-    fetchingRef.current = true;
+  // Stable key for symbols to avoid unnecessary re-renders
+  const symbolsKey = symbols ? symbols.join(',') : '';
 
+  const doFetch = useCallback(async (syms: string) => {
     try {
       let url = '/api/market/prices';
-      if (symbols && symbols.length > 0) {
-        url += `?symbols=${symbols.join(',')}`;
+      if (syms) {
+        url += `?symbols=${syms}`;
       }
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('fetch failed');
 
       const data = await res.json();
-      if (!mountedRef.current) return;
 
       setConnected(true);
-      setMarketStatus(data.marketStatus);
+      setMarketStatus(data.marketStatus || { isOpen: false });
       setLastUpdate(new Date(data.timestamp));
 
       if (Array.isArray(data.prices)) {
@@ -65,7 +62,7 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
           const next = new Map(prev);
           for (const item of data.prices) {
             const prevPrice = prevPricesRef.current.get(item.symbol);
-            const isLive = data.marketStatus.isOpen;
+            const isLive = data.marketStatus?.isOpen;
             const direction: 'up' | 'down' | 'unchanged' =
               !isLive || prevPrice === undefined || prevPrice === item.price
                 ? 'unchanged'
@@ -79,43 +76,59 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
           return next;
         });
       }
+
+      return data.marketStatus?.isOpen ?? false;
     } catch {
-      if (mountedRef.current) setConnected(false);
-    } finally {
-      fetchingRef.current = false;
+      setConnected(false);
+      return null;
     }
-  }, [enabled, symbols]);
+  }, []);
 
-  // Poll loop
   useEffect(() => {
-    mountedRef.current = true;
-    initialFetchDone.current = false;
+    if (!enabled || !symbolsKey) return;
 
-    function schedule() {
-      if (!mountedRef.current || !enabled) return;
-      const interval = marketStatus.isOpen ? POLL_INTERVAL_OPEN : POLL_INTERVAL_CLOSED;
-      timerRef.current = setTimeout(async () => {
-        await fetchPrices();
-        schedule();
-      }, interval);
+    // Clear previous interval if symbols changed
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
+    symbolsKeyRef.current = symbolsKey;
+
+    let cancelled = false;
+    let isOpen = false;
 
     // Initial fetch
-    fetchPrices().then(() => {
-      if (!initialFetchDone.current) {
-        initialFetchDone.current = true;
-        schedule();
-      }
+    doFetch(symbolsKey).then((result) => {
+      if (cancelled) return;
+      if (result !== null) isOpen = result;
+
+      // Start polling
+      const interval = isOpen ? POLL_INTERVAL_OPEN : POLL_INTERVAL_CLOSED;
+      intervalRef.current = setInterval(async () => {
+        if (cancelled) return;
+        const newStatus = await doFetch(symbolsKeyRef.current);
+        if (newStatus !== null && newStatus !== isOpen) {
+          // Market status changed — adjust interval
+          isOpen = newStatus;
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          const newInterval = isOpen ? POLL_INTERVAL_OPEN : POLL_INTERVAL_CLOSED;
+          intervalRef.current = setInterval(async () => {
+            if (cancelled) return;
+            const s = await doFetch(symbolsKeyRef.current);
+            if (s !== null) isOpen = s;
+          }, newInterval);
+        }
+      }, interval);
     });
 
     return () => {
-      mountedRef.current = false;
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
+      cancelled = true;
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [fetchPrices, enabled, marketStatus.isOpen]);
+  }, [enabled, symbolsKey, doFetch]);
 
   const getPrice = useCallback(
     (symbol: string): LivePrice | undefined => {

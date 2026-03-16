@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import YahooFinance from 'yahoo-finance2';
 
+// Allow up to 30s on Vercel Hobby plan (default is 10s)
+export const maxDuration = 30;
+
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
 // NSE holidays (MM-DD)
