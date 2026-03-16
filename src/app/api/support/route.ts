@@ -31,7 +31,9 @@ export async function GET() {
       .limit(20);
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to fetch support requests' }, { status: 500 });
+      console.error('Support GET db error:', error);
+      // Fail soft: return empty list instead of hard 500 so UI still works
+      return NextResponse.json({ items: [] });
     }
 
     return NextResponse.json({ items: data ?? [] });

@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 """
 Indian Stock Market News Scraper
