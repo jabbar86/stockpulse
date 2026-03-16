@@ -179,6 +179,11 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
           </div>
         )}
 
+        {/* Disclaimer */}
+        <p className="text-[10px] sm:text-xs text-muted-foreground border-t pt-3">
+          This analysis is purely based on available market data and technical indicators. All investments are subject to market risk. Please do your own research before making any investment decisions.
+        </p>
+
         {/* Re-analyze button */}
         <div className="flex justify-end pt-2">
           <Button variant="outline" size="sm" onClick={onAnalyze} className="gap-2">
