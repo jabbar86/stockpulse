@@ -110,6 +110,17 @@ create table if not exists premium_requests (
   created_at timestamptz default now()
 );
 
+-- Support inquiries
+create table if not exists support_requests (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  subject text not null,
+  category text not null default 'general' check (category in ('general', 'bug', 'feature', 'billing')),
+  message text not null,
+  status text not null default 'open' check (status in ('open', 'in_progress', 'closed')),
+  created_at timestamptz default now()
+);
+
 -- Indexes
 create index if not exists idx_market_news_published on market_news(published_at desc);
 create index if not exists idx_market_news_category on market_news(category);
@@ -128,6 +139,7 @@ alter table analysis_history enable row level security;
 alter table analysis_cache enable row level security;
 alter table market_news enable row level security;
 alter table premium_requests enable row level security;
+alter table support_requests enable row level security;
 
 -- RLS Policies: users can only access their own data
 create policy "Users can view own profile" on profiles for select using (auth.uid() = id);
@@ -157,3 +169,8 @@ create policy "Service can manage market news" on market_news for all using (tru
 create policy "Users can view own premium requests" on premium_requests for select using (auth.uid() = user_id);
 create policy "Users can insert premium requests" on premium_requests for insert with check (auth.uid() = user_id);
 create policy "Service can manage premium requests" on premium_requests for all using (true);
+
+-- Support requests: users can view their own, service role manages all
+create policy "Users can view own support requests" on support_requests for select using (auth.uid() = user_id);
+create policy "Users can insert support requests" on support_requests for insert with check (auth.uid() = user_id);
+create policy "Service can manage support requests" on support_requests for all using (true);

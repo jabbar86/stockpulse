@@ -73,6 +73,34 @@ export interface PortfolioSummary {
   top_losers: HoldingWithMetrics[];
 }
 
+export interface PortfolioHealthRiskTag {
+  id: 'concentration' | 'sector_imbalance' | 'smallcap_risk' | 'quality_risk' | 'valuation_risk';
+  label: string;
+  severity: 'low' | 'medium' | 'high';
+  description: string;
+}
+
+export interface PortfolioHealthSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  priority: 'low' | 'medium' | 'high';
+}
+
+export interface PortfolioHealthResult {
+  score: number; // 0-100
+  risk_tags: PortfolioHealthRiskTag[];
+  suggestions: PortfolioHealthSuggestion[];
+  sector_breakdown: {
+    sector: string;
+    weight_percent: number;
+  }[];
+  concentration: {
+    top_holding_weight: number;
+    top3_weight: number;
+  };
+}
+
 // Analysis types
 export interface TechnicalIndicators {
   rsi: { value: number; signal: 'oversold' | 'neutral' | 'overbought' };
@@ -117,6 +145,45 @@ export interface CombinedAnalysis {
   recommendation: 'strong_buy' | 'buy' | 'hold' | 'sell' | 'strong_sell';
   confidence: number;
   analyzed_at: string;
+}
+
+export type StrategyTimeframe = 'intraday' | 'swing' | 'positional';
+
+export type StrategySignalType =
+  | 'long_breakout'
+  | 'pullback_long'
+  | 'mean_reversion_long'
+  | 'take_profit'
+  | 'risk_exit';
+
+export interface StrategySignal {
+  id: string;
+  symbol: string;
+  name?: string;
+  timeframe: StrategyTimeframe;
+  type: StrategySignalType;
+  direction: 'buy' | 'sell' | 'exit';
+  entry: number;
+  stop_loss: number;
+  target: number;
+  confidence: number; // 0-100
+  reason: string;
+  strategy_name: string;
+  generated_at: string;
+}
+
+export interface StockRecommendation {
+  symbol: string;
+  name?: string;
+  timeframe: StrategyTimeframe;
+  action: 'buy' | 'sell' | 'hold' | 'exit';
+  conviction: number; // 0-100
+  entry: number;
+  stop_loss: number;
+  target: number;
+  reason: string;
+  source_signal?: StrategySignalType;
+  generated_at: string;
 }
 
 // Broker types

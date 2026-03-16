@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type {
@@ -21,6 +21,7 @@ import {
   ArrowLeftIcon,
   BarChart3Icon,
   WifiIcon,
+  StarIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useLivePrices } from '@/hooks/use-live-prices';
@@ -90,6 +91,8 @@ export default function StockAnalysisPage() {
   // AI Analysis state
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysis | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
 
   // Live price stream — only during market hours
   const symbolsForStream = symbol ? [symbol] : [];
@@ -201,6 +204,52 @@ export default function StockAnalysisPage() {
     }
   };
 
+  useEffect(() => {
+    async function fetchFav() {
+      if (!symbol) return;
+      try {
+        const res = await fetch('/api/watchlist');
+        if (!res.ok) return;
+        const data = await res.json();
+        const items = (data.items || []) as { symbol: string }[];
+        setIsFavorite(items.some((i) => i.symbol.toUpperCase() === symbol));
+      } catch {
+        // ignore
+      }
+    }
+    fetchFav();
+  }, [symbol]);
+
+  const handleToggleFavorite = async () => {
+    if (!symbol || !analysis) return;
+    setFavLoading(true);
+    try {
+      if (isFavorite) {
+        const res = await fetch(`/api/watchlist?symbol=${symbol}`, { method: 'DELETE' });
+        if (res.ok) {
+          setIsFavorite(false);
+        }
+      } else {
+        const res = await fetch('/api/watchlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol,
+            name: analysis.name || symbol,
+            exchange: (stockQuote?.symbol?.endsWith('.BO') ? 'BSE' : 'NSE') as 'NSE' | 'BSE',
+          }),
+        });
+        if (res.ok) {
+          setIsFavorite(true);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setFavLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -224,6 +273,23 @@ export default function StockAnalysisPage() {
   const priceChangePercent = live?.changePercent ?? stockQuote?.changePercent ?? 0;
   const isPositive = priceChange >= 0;
 
+  const suggestedActionLabel = useMemo(() => {
+    const rec = analysis?.recommendation || aiAnalysis?.recommendation;
+    if (!rec) return 'No clear signal';
+    switch (rec) {
+      case 'strong_buy':
+        return 'Strong Buy';
+      case 'buy':
+        return 'Buy';
+      case 'sell':
+        return 'Sell';
+      case 'strong_sell':
+        return 'Strong Sell';
+      default:
+        return 'Hold';
+    }
+  }, [analysis, aiAnalysis]);
+
   return (
     <div className="space-y-6">
       {/* Back Button */}
@@ -240,6 +306,25 @@ export default function StockAnalysisPage() {
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">{analysis?.name || symbol}</h1>
           <Badge variant="outline">{symbol}</Badge>
+          <button
+            type="button"
+            onClick={handleToggleFavorite}
+            disabled={favLoading}
+            className={`inline-flex items-center justify-center rounded-full border px-2 py-1 text-xs gap-1 transition-colors ${
+              isFavorite
+                ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-600 dark:text-yellow-400'
+                : 'bg-transparent border-muted text-muted-foreground hover:bg-muted/40'
+            }`}
+          >
+            <StarIcon
+              className={`size-3.5 ${
+                isFavorite ? 'fill-yellow-400 stroke-yellow-500' : ''
+              }`}
+            />
+            <span className="hidden sm:inline">
+              {isFavorite ? 'In Watchlist' : 'Add to Watchlist'}
+            </span>
+          </button>
           {analysis?.technical?.overallSignal && (
             <Badge className={getSignalConfig(analysis.technical.overallSignal).className}>
               {getSignalConfig(analysis.technical.overallSignal).label}
@@ -352,6 +437,44 @@ export default function StockAnalysisPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Suggested Action */}
+      {(analysis || aiAnalysis) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm sm:text-base">
+              Suggested Action
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 sm:space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">
+                  Based on technicals{aiAnalysis ? ' + AI view' : ''}.
+                </p>
+                <p className="text-base sm:text-lg font-semibold">
+                  {suggestedActionLabel}
+                </p>
+              </div>
+              {aiAnalysis?.confidence !== undefined && (
+                <div className="text-right">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">
+                    Confidence
+                  </p>
+                  <p className="text-sm font-semibold tabular-nums">
+                    {aiAnalysis.confidence}%
+                  </p>
+                </div>
+              )}
+            </div>
+            {aiAnalysis?.summary && (
+              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-3">
+                {aiAnalysis.summary}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Technical Indicators */}
       {analysis?.technical && (

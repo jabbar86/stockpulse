@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import type { HoldingWithMetrics } from '@/types';
+import type { HoldingWithMetrics, PortfolioHealthResult } from '@/types';
 import { useLivePrices } from '@/hooks/use-live-prices';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,7 @@ export default function PortfolioPage() {
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+  const [health, setHealth] = useState<PortfolioHealthResult | null>(null);
 
   // Edit state
   const [editHolding, setEditHolding] = useState<HoldingWithMetrics | null>(null);
@@ -64,6 +65,11 @@ export default function PortfolioPage() {
       if (res.ok) {
         const data = await res.json();
         setHoldings(data.holdings || []);
+      }
+      const healthRes = await fetch('/api/portfolio/health');
+      if (healthRes.ok) {
+        const { health } = await healthRes.json();
+        setHealth(health);
       }
     } catch {
       // silently fail
@@ -201,69 +207,129 @@ export default function PortfolioPage() {
 
       {/* Portfolio Summary Cards */}
       {!loading && liveHoldings.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-6 sm:rounded-lg sm:border sm:p-4">
-          <div className="rounded-lg border p-3 sm:border-0 sm:p-0">
-            <div className="flex items-center gap-1.5 sm:block">
-              <WalletIcon className="size-3.5 text-muted-foreground sm:hidden" />
-              <p className="text-[10px] sm:text-sm text-muted-foreground">Total Value</p>
-            </div>
-            <p className="text-sm sm:text-lg font-bold tabular-nums mt-0.5">
-              {formatCurrency(totalValue)}
-            </p>
-          </div>
-          <div className="rounded-lg border p-3 sm:border-0 sm:p-0">
-            <div className="flex items-center gap-1.5 sm:block">
-              <LayersIcon className="size-3.5 text-muted-foreground sm:hidden" />
-              <p className="text-[10px] sm:text-sm text-muted-foreground">Invested</p>
-            </div>
-            <p className="text-sm sm:text-lg font-bold tabular-nums mt-0.5">
-              {formatCurrency(totalInvested)}
-            </p>
-          </div>
-          <div className="rounded-lg border p-3 sm:border-0 sm:p-0">
-            <div className="flex items-center gap-1.5 sm:block">
-              {isProfit ? (
-                <TrendingUpIcon className="size-3.5 text-green-500 sm:hidden" />
-              ) : (
-                <TrendingDownIcon className="size-3.5 text-red-500 sm:hidden" />
+        <Card className="border-none shadow-none sm:border sm:shadow-sm">
+          <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
+              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5">
+                  <WalletIcon className="size-3.5 text-muted-foreground" />
+                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                    Total Value
+                  </p>
+                </div>
+                <p className="text-sm sm:text-lg font-bold tabular-nums mt-1">
+                  {formatCurrency(totalValue)}
+                </p>
+              </div>
+
+              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5">
+                  <LayersIcon className="size-3.5 text-muted-foreground" />
+                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                    Invested
+                  </p>
+                </div>
+                <p className="text-sm sm:text-lg font-bold tabular-nums mt-1">
+                  {formatCurrency(totalInvested)}
+                </p>
+              </div>
+
+              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5">
+                  {isProfit ? (
+                    <TrendingUpIcon className="size-3.5 text-green-500" />
+                  ) : (
+                    <TrendingDownIcon className="size-3.5 text-red-500" />
+                  )}
+                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                    Total P&L
+                  </p>
+                </div>
+                <p className={`text-sm sm:text-lg font-bold tabular-nums mt-1 ${pnlColor}`}>
+                  {formatCurrency(totalPnl)}
+                </p>
+                <p className={`text-[10px] sm:text-xs ${pnlColor}`}>
+                  {formatPercent(totalPnlPercent)}
+                </p>
+              </div>
+
+              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
+                <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                  Holdings
+                </p>
+                <p className="text-sm sm:text-lg font-bold mt-1">
+                  {liveHoldings.length}
+                </p>
+              </div>
+
+              {health && (
+                <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
+                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                    Health Score
+                  </p>
+                  <p className="text-sm sm:text-lg font-bold mt-1">
+                    {Math.round(health.score)}
+                  </p>
+                  {health.risk_tags.length > 0 && (
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                      {health.risk_tags[0]?.label}
+                    </p>
+                  )}
+                </div>
               )}
-              <p className="text-[10px] sm:text-sm text-muted-foreground">Total P&L</p>
             </div>
-            <p className={`text-sm sm:text-lg font-bold tabular-nums mt-0.5 ${pnlColor}`}>
-              {formatCurrency(totalPnl)}
-            </p>
-            <p className={`text-[10px] sm:text-sm ${pnlColor}`}>
-              {formatPercent(totalPnlPercent)}
-            </p>
-          </div>
-          <div className="rounded-lg border p-3 sm:border-0 sm:p-0">
-            <p className="text-[10px] sm:text-sm text-muted-foreground">Holdings</p>
-            <p className="text-sm sm:text-lg font-bold mt-0.5">{liveHoldings.length}</p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Holdings */}
-      <Card>
-        <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-5 pb-1 sm:pb-3">
-          <CardTitle className="text-sm sm:text-lg">Holdings</CardTitle>
-        </CardHeader>
-        <CardContent className="px-2 sm:px-6 pb-2 sm:pb-6">
-          {loading ? (
-            <div className="space-y-2 sm:space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-lg" />
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2.2fr)_minmax(260px,1fr)]">
+        <Card>
+          <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-5 pb-1 sm:pb-3">
+            <CardTitle className="text-sm sm:text-lg">Holdings</CardTitle>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6 pb-2 sm:pb-6">
+            {loading ? (
+              <div className="space-y-2 sm:space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-14 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <HoldingsTable
+                holdings={liveHoldings}
+                onEdit={handleEditOpen}
+                onDelete={(h) => setDeleteHolding(h)}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        {health && (
+          <Card className="h-fit">
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base">
+                Recommended Moves
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 sm:space-y-3">
+              {health.suggestions.slice(0, 3).map((sugg) => (
+                <div
+                  key={sugg.id}
+                  className="rounded-lg border px-3 py-2 text-left"
+                >
+                  <p className="text-xs sm:text-sm font-semibold">
+                    {sugg.title}
+                  </p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                    {sugg.description}
+                  </p>
+                </div>
               ))}
-            </div>
-          ) : (
-            <HoldingsTable
-              holdings={liveHoldings}
-              onEdit={handleEditOpen}
-              onDelete={(h) => setDeleteHolding(h)}
-            />
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
       {/* Add Holding Dialog */}
       <AddHoldingDialog

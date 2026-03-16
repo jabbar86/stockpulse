@@ -14,6 +14,7 @@ import {
   BarChart3,
   ChevronRight,
   Newspaper,
+  LifeBuoy,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -24,6 +25,7 @@ const navItems = [
   { href: '/stocks', label: 'Stocks', icon: TrendingUp },
   { href: '/news', label: 'News', icon: Newspaper },
   { href: '/brokers', label: 'Connect', icon: Link2 },
+  { href: '/support', label: 'Support', icon: LifeBuoy },
 ];
 
 export default function Sidebar() {

@@ -2,7 +2,12 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import type { PortfolioSummary, HoldingWithMetrics } from '@/types';
+import type {
+  PortfolioSummary,
+  HoldingWithMetrics,
+  StrategySignal,
+  StockRecommendation,
+} from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -41,6 +46,8 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [holdings, setHoldings] = useState<HoldingWithMetrics[]>([]);
   const [loading, setLoading] = useState(true);
+  const [signals, setSignals] = useState<StrategySignal[]>([]);
+  const [recommendations, setRecommendations] = useState<StockRecommendation[]>([]);
 
   // Get portfolio holding symbols for live streaming
   const holdingSymbols = useMemo(
@@ -61,6 +68,20 @@ export default function DashboardPage() {
           const data = await res.json();
           setSummary(data.summary);
           setHoldings(data.holdings || []);
+        }
+        const [sigRes, recRes] = await Promise.all([
+          fetch('/api/market/signals'),
+          fetch('/api/recommendations/stocks'),
+        ]);
+
+        if (sigRes.ok) {
+          const data = await sigRes.json();
+          setSignals(data.signals || []);
+        }
+
+        if (recRes.ok) {
+          const data = await recRes.json();
+          setRecommendations(data.recommendations || []);
         }
       } catch {
         // handle error silently
@@ -266,6 +287,98 @@ export default function DashboardPage() {
 
       {/* Smart Insights */}
       {liveHoldings.length > 0 && <SmartInsights holdings={liveHoldings} />}
+
+      {/* Strategy Signals & Recommendations */}
+      {(signals.length > 0 || recommendations.length > 0) && (
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2">
+          {signals.length > 0 && (
+            <Card>
+              <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-5 pb-2">
+                <CardTitle className="text-sm sm:text-lg">
+                  Today&apos;s Strategy Signals
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
+                <div className="space-y-1.5 sm:space-y-2">
+                  {signals.slice(0, 5).map((sig) => (
+                    <div
+                      key={sig.id}
+                      className="flex items-start justify-between rounded-lg border p-2.5 sm:p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-xs sm:text-sm">
+                          {sig.symbol}{' '}
+                          <span className="text-[10px] sm:text-xs text-muted-foreground">
+                            · {sig.strategy_name}
+                          </span>
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">
+                          {sig.reason}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <p className="text-[10px] sm:text-xs uppercase font-semibold">
+                          {sig.direction === 'buy'
+                            ? 'BUY'
+                            : sig.direction === 'sell'
+                            ? 'SELL'
+                            : 'EXIT'}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 tabular-nums">
+                          Entry ~ {sig.entry.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {recommendations.length > 0 && (
+            <Card>
+              <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-5 pb-2">
+                <CardTitle className="text-sm sm:text-lg">
+                  Watchlist Recommendations
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
+                <div className="space-y-1.5 sm:space-y-2">
+                  {recommendations.slice(0, 5).map((rec) => (
+                    <div
+                      key={`${rec.symbol}-${rec.generated_at}`}
+                      className="flex items-start justify-between rounded-lg border p-2.5 sm:p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-xs sm:text-sm">
+                          {rec.symbol}{' '}
+                          <span className="text-[10px] sm:text-xs text-muted-foreground">
+                            · {rec.action.toUpperCase()}
+                          </span>
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">
+                          {rec.reason}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        <p className="text-[10px] sm:text-xs tabular-nums">
+                          Entry ~ {rec.entry.toFixed(2)}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground tabular-nums">
+                          SL {rec.stop_loss.toFixed(2)} · TP {rec.target.toFixed(2)}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                          Conviction {rec.conviction}%
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Holdings Overview */}
       {liveHoldings.length > 0 && (
