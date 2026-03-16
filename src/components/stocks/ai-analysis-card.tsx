@@ -111,7 +111,7 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
               Key Factors
             </h4>
             <ul className="space-y-1">
-              {analysis.key_factors.map((factor, i) => (
+              {(analysis.key_factors || []).map((factor, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-green-500" />
                   {factor}
@@ -126,7 +126,7 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
               Risks
             </h4>
             <ul className="space-y-1">
-              {analysis.risks.map((risk, i) => (
+              {(analysis.risks || []).map((risk, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
                   <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-red-500" />
                   {risk}

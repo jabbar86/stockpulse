@@ -192,7 +192,7 @@ export default function StockAnalysisPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setAiAnalysis(data.analysis || data);
+        setAiAnalysis(data.ai || data.analysis || data);
       }
     } catch {
       // silently fail
