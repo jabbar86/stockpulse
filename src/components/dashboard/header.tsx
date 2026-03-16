@@ -37,10 +37,12 @@ export default function Header() {
       {/* Mobile: App logo + page title */}
       <div className="flex items-center gap-2 md:hidden">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
             <LineChart className="size-3.5" />
           </div>
-          <span className="font-bold text-sm tracking-tight">StockPulse</span>
+          <span className="font-semibold text-sm tracking-tight">
+            Stock<span className="text-primary">Pulse</span>
+          </span>
         </Link>
         {pageTitle && (
           <>

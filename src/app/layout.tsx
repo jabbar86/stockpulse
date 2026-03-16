@@ -16,9 +16,44 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'StockPulse - AI-Powered Stock Analysis Platform',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://stockpulse.app'),
+  title: {
+    default: 'StockPulse - AI-Powered Stock Analysis Platform',
+    template: '%s | StockPulse',
+  },
   description:
-    'Analyze your stock portfolio with AI and technical indicators. Connect your broker or add holdings manually.',
+    'StockPulse helps Indian investors with AI-powered stock analysis, portfolio health scoring, and real-time market insights.',
+  keywords: [
+    'Indian stocks',
+    'stock analysis',
+    'NSE',
+    'BSE',
+    'portfolio tracker',
+    'stock recommendation engine',
+  ],
+  openGraph: {
+    type: 'website',
+    url: '/',
+    title: 'StockPulse - AI-Powered Stock Analysis for Indian Markets',
+    description:
+      'Analyze your Indian stock portfolio with AI, technical indicators, and real-time market data.',
+    siteName: 'StockPulse',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  verification: {
+    // Replace this with your actual Google Search Console verification code
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || '',
+  },
 };
 
 export default function RootLayout({
