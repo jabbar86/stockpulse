@@ -22,21 +22,39 @@ interface PriceUpdate {
   timestamp: number;
 }
 
-function getMarketStatus() {
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
+function getISTParts(): { year: number; month: number; day: number; hour: number; minute: number } {
+  const dtf = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const parts = dtf.formatToParts(new Date());
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour'),
+    minute: get('minute'),
+  };
+}
 
-  const day = ist.getDay();
-  const isWeekend = day === 0 || day === 6;
-  const mmdd = `${String(ist.getMonth() + 1).padStart(2, '0')}-${String(ist.getDate()).padStart(2, '0')}`;
+function getMarketStatus() {
+  const ist = getISTParts();
+  const dayOfWeek = new Date(Date.UTC(ist.year, ist.month - 1, ist.day)).getUTCDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const mmdd = `${String(ist.month).padStart(2, '0')}-${String(ist.day).padStart(2, '0')}`;
   const isHoliday = NSE_HOLIDAYS.has(mmdd);
 
   if (isWeekend || isHoliday) {
     return { isOpen: false, isWeekend, isHoliday };
   }
 
-  const mins = ist.getHours() * 60 + ist.getMinutes();
+  const mins = ist.hour * 60 + ist.minute;
   const isOpen = mins >= 555 && mins <= 930; // 9:15 AM - 3:30 PM IST
 
   return { isOpen, isWeekend, isHoliday };
@@ -50,10 +68,8 @@ let cacheUpdatedAt = 0;
 let cacheTradingDate = '';
 
 function getISTDateString(): string {
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
-  return ist.toISOString().split('T')[0];
+  const ist = getISTParts();
+  return `${ist.year}-${String(ist.month).padStart(2, '0')}-${String(ist.day).padStart(2, '0')}`;
 }
 
 // TTLs: 15s during market hours, 5 min after hours

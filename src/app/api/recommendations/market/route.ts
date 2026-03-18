@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getHistoricalData } from '@/lib/market-data/provider';
+import { NIFTY_50, NIFTY_100 } from '@/lib/market-data/universe';
 import {
   computeBreakoutSignal,
   computePullbackLongSignal,
@@ -14,27 +15,33 @@ import { SMA, RSI, ATR } from 'technicalindicators';
 
 export const maxDuration = 30;
 
-// Keep universe modest to stay under timeouts for free data calls.
-const MARKET_UNIVERSE: { symbol: string; name: string }[] = [
-  { symbol: 'RELIANCE', name: 'Reliance Industries Ltd' },
-  { symbol: 'TCS', name: 'Tata Consultancy Services Ltd' },
-  { symbol: 'INFY', name: 'Infosys Ltd' },
-  { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd' },
-  { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd' },
-  { symbol: 'SBIN', name: 'State Bank of India' },
-  { symbol: 'ITC', name: 'ITC Ltd' },
-  { symbol: 'LT', name: 'Larsen & Toubro Ltd' },
-  { symbol: 'AXISBANK', name: 'Axis Bank Ltd' },
-  { symbol: 'BAJFINANCE', name: 'Bajaj Finance Ltd' },
-  { symbol: 'MARUTI', name: 'Maruti Suzuki India Ltd' },
-  { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical Industries Ltd' },
-  { symbol: 'NTPC', name: 'NTPC Ltd' },
-  { symbol: 'HCLTECH', name: 'HCL Technologies Ltd' },
-  { symbol: 'WIPRO', name: 'Wipro Ltd' },
-  { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank Ltd' },
-  { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd' },
-  { symbol: 'HINDUNILVR', name: 'Hindustan Unilever Ltd' },
-];
+type RiskMode = 'atr' | 'fixed';
+
+function parseRiskMode(value: string | null, fallback: RiskMode): RiskMode {
+  if (value === 'atr' || value === 'fixed') return value;
+  return fallback;
+}
+
+function applyRiskRules(
+  rec: StockRecommendation,
+  mode: RiskMode,
+  fixed: { slPct: number; tpPct: number }
+): StockRecommendation {
+  if (mode !== 'fixed') return rec;
+  const entry = rec.entry;
+  if (!Number.isFinite(entry) || entry <= 0) return rec;
+
+  // Apply only for actionable directions; keep for hold as a reference plan
+  const stopLoss = entry * (1 - fixed.slPct / 100);
+  const target = entry * (1 + fixed.tpPct / 100);
+
+  return {
+    ...rec,
+    stop_loss: stopLoss,
+    target,
+    reason: `${rec.reason} (Fixed risk: SL ${fixed.slPct.toFixed(1)}% / TP ${fixed.tpPct.toFixed(1)}%)`,
+  };
+}
 
 function topN(items: StockRecommendation[], n: number): StockRecommendation[] {
   return [...items].sort((a, b) => b.conviction - a.conviction).slice(0, n);
@@ -117,12 +124,28 @@ export async function GET(request: NextRequest) {
     const url = request.nextUrl;
     const limit = Math.max(1, Math.min(25, Number(url.searchParams.get('limit') || 8)));
 
+    const universe = (url.searchParams.get('universe') || 'nifty50').toLowerCase();
+    const symbols =
+      universe === 'nifty100'
+        ? NIFTY_100
+        : NIFTY_50;
+
+    const intradayMode = parseRiskMode(url.searchParams.get('intradayRisk'), 'atr');
+    const swingMode = parseRiskMode(url.searchParams.get('swingRisk'), 'atr');
+    const longMode = parseRiskMode(url.searchParams.get('longRisk'), 'atr');
+
+    // Defaults when fixed is selected
+    const intradayFixed = { slPct: Number(url.searchParams.get('intradaySlPct') || 0.8), tpPct: Number(url.searchParams.get('intradayTpPct') || 1.6) };
+    const swingFixed = { slPct: Number(url.searchParams.get('swingSlPct') || 5), tpPct: Number(url.searchParams.get('swingTpPct') || 10) };
+    const longFixed = { slPct: Number(url.searchParams.get('longSlPct') || 10), tpPct: Number(url.searchParams.get('longTpPct') || 20) };
+
     const intraday: StockRecommendation[] = [];
     const swing: StockRecommendation[] = [];
     const positional: StockRecommendation[] = [];
     const common: StockRecommendation[] = [];
 
-    for (const { symbol, name } of MARKET_UNIVERSE) {
+    for (const symbol of symbols) {
+      const name = symbol;
       // Intraday (5m)
       try {
         const candles5m = await getHistoricalData(symbol, '1d_5m');
@@ -130,7 +153,7 @@ export async function GET(request: NextRequest) {
         const intradayBreakout = computeIntradayBreakoutSignal({ symbol, name, candles: candles5m });
         if (intradayBreakout) s.push(intradayBreakout);
         const rec = buildStockRecommendation(symbol, name, s);
-        if (rec) intraday.push(rec);
+        if (rec) intraday.push(applyRiskRules(rec, intradayMode, intradayFixed));
       } catch {
         // ignore single-symbol failures
       }
@@ -146,7 +169,7 @@ export async function GET(request: NextRequest) {
         if (pullback) s.push(pullback);
         if (exit) s.push(exit);
         const rec = buildStockRecommendation(symbol, name, s);
-        if (rec) swing.push(rec);
+        if (rec) swing.push(applyRiskRules(rec, swingMode, swingFixed));
       } catch {
         // ignore
       }
@@ -158,11 +181,11 @@ export async function GET(request: NextRequest) {
         const trend = computePositionalTrendSignal({ symbol, name, candles });
         if (trend) s.push(trend);
         const rec = buildStockRecommendation(symbol, name, s);
-        if (rec) positional.push(rec);
+        if (rec) positional.push(applyRiskRules(rec, longMode, longFixed));
 
         // Common tab: always try to produce a “best overall” list
         const commonRec = computeCommonTrendRecommendation(symbol, name, candles);
-        if (commonRec) common.push(commonRec);
+        if (commonRec) common.push(applyRiskRules(commonRec, longMode, longFixed));
       } catch {
         // ignore
       }
@@ -174,7 +197,13 @@ export async function GET(request: NextRequest) {
       long_term: topN(positional, limit),
       common: topN(common, limit),
       generatedAt: new Date().toISOString(),
-      universeSize: MARKET_UNIVERSE.length,
+      universe,
+      universeSize: symbols.length,
+      risk: {
+        intraday: { mode: intradayMode, fixed: intradayFixed },
+        swing: { mode: swingMode, fixed: swingFixed },
+        long_term: { mode: longMode, fixed: longFixed },
+      },
     });
   } catch (error) {
     console.error('Market recommendations error:', error);

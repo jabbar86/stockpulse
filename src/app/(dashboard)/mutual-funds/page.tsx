@@ -28,6 +28,24 @@ export default function MutualFundsPage() {
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<MutualFundDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [trending, setTrending] = useState<MutualFundSearchResult[]>([]);
+  const [loadingTrending, setLoadingTrending] = useState(true);
+
+  useEffect(() => {
+    async function loadTrending() {
+      try {
+        const res = await fetch('/api/mutual-funds/trending');
+        if (!res.ok) return;
+        const data = await res.json();
+        setTrending(data.results || []);
+      } catch {
+        // ignore
+      } finally {
+        setLoadingTrending(false);
+      }
+    }
+    loadTrending();
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -155,6 +173,47 @@ export default function MutualFundsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Trending */}
+      {!selected && !q.trim() && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm sm:text-lg">Trending Mutual Funds</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingTrending ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : trending.length === 0 ? (
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                Trending list is unavailable right now. Try searching above.
+              </p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {trending.slice(0, 10).map((r) => (
+                  <button
+                    key={r.schemeCode}
+                    onClick={() => openScheme(r.schemeCode)}
+                    className="rounded-lg border px-3 py-2.5 text-left hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs sm:text-sm font-medium line-clamp-2">
+                        {r.schemeName}
+                      </p>
+                      <Badge variant="outline" className="text-[10px] shrink-0">
+                        {r.schemeCode}
+                      </Badge>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Details */}
       {(loadingDetails || selected) && (

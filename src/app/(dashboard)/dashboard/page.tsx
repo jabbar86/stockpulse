@@ -21,7 +21,6 @@ import {
   WifiOffIcon,
 } from 'lucide-react';
 import { useLivePrices } from '@/hooks/use-live-prices';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 // Lazy load heavy components — Recharts (~200KB) and SmartInsights
 const AllocationChart = dynamic(() => import('@/components/portfolio/allocation-chart'), {
@@ -49,13 +48,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [signals, setSignals] = useState<StrategySignal[]>([]);
   const [recommendations, setRecommendations] = useState<StockRecommendation[]>([]);
-  const [marketRecs, setMarketRecs] = useState<{
-    intraday: StockRecommendation[];
-    swing: StockRecommendation[];
-    long_term: StockRecommendation[];
-    common: StockRecommendation[];
-  } | null>(null);
-  const [recTab, setRecTab] = useState<'common' | 'intraday' | 'swing' | 'long_term'>('common');
 
   // Get portfolio holding symbols for live streaming
   const holdingSymbols = useMemo(
@@ -77,10 +69,9 @@ export default function DashboardPage() {
           setSummary(data.summary);
           setHoldings(data.holdings || []);
         }
-        const [sigRes, recRes, marketRes] = await Promise.all([
+        const [sigRes, recRes] = await Promise.all([
           fetch('/api/market/signals'),
           fetch('/api/recommendations/stocks'),
-          fetch('/api/recommendations/market?limit=8'),
         ]);
 
         if (sigRes.ok) {
@@ -91,16 +82,6 @@ export default function DashboardPage() {
         if (recRes.ok) {
           const data = await recRes.json();
           setRecommendations(data.recommendations || []);
-        }
-
-        if (marketRes.ok) {
-          const data = await marketRes.json();
-          setMarketRecs({
-            intraday: data.intraday || [],
-            swing: data.swing || [],
-            long_term: data.long_term || [],
-            common: data.common || [],
-          });
         }
       } catch {
         // handle error silently
@@ -397,95 +378,6 @@ export default function DashboardPage() {
             </Card>
           )}
         </div>
-      )}
-
-      {/* Market-wide Recommendations */}
-      {marketRecs && (
-        <Card>
-          <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-5 pb-2">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-sm sm:text-lg">
-                Market Recommendations
-              </CardTitle>
-              <Tabs value={recTab} onValueChange={(v) => setRecTab(v as any)}>
-                <TabsList className="h-8" variant="default">
-                  <TabsTrigger value="common" className="text-xs px-2 h-7">
-                    Common
-                  </TabsTrigger>
-                  <TabsTrigger value="intraday" className="text-xs px-2 h-7">
-                    Intraday
-                  </TabsTrigger>
-                  <TabsTrigger value="swing" className="text-xs px-2 h-7">
-                    Swing
-                  </TabsTrigger>
-                  <TabsTrigger value="long_term" className="text-xs px-2 h-7">
-                    Long-term
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
-            <div className="space-y-1.5 sm:space-y-2">
-              {(recTab === 'common'
-                ? marketRecs.common
-                : recTab === 'intraday'
-                ? marketRecs.intraday
-                : recTab === 'swing'
-                ? marketRecs.swing
-                : marketRecs.long_term
-              ).slice(0, 8).map((rec) => (
-                <div
-                  key={`${rec.symbol}-${rec.generated_at}-${rec.timeframe}`}
-                  className="flex items-start justify-between rounded-lg border p-2.5 sm:p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-xs sm:text-sm">
-                      {rec.symbol}{' '}
-                      <span className="text-[10px] sm:text-xs text-muted-foreground">
-                        · {rec.action.toUpperCase()} · {rec.timeframe}
-                      </span>
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground line-clamp-2">
-                      {rec.reason}
-                    </p>
-                  </div>
-                  <div className="text-right shrink-0 ml-3">
-                    <p className="text-[10px] sm:text-xs tabular-nums">
-                      Entry ~ {rec.entry.toFixed(2)}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground tabular-nums">
-                      SL {rec.stop_loss.toFixed(2)} · TP {rec.target.toFixed(2)}
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
-                      Conviction {rec.conviction}%
-                    </p>
-                  </div>
-                </div>
-              ))}
-              {recTab === 'common' && marketRecs.common.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  No common picks right now.
-                </p>
-              )}
-              {recTab === 'intraday' && marketRecs.intraday.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  No intraday setups right now.
-                </p>
-              )}
-              {recTab === 'swing' && marketRecs.swing.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  No swing setups right now.
-                </p>
-              )}
-              {recTab === 'long_term' && marketRecs.long_term.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  No long-term setups right now.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
       )}
 
       {/* Holdings Overview */}

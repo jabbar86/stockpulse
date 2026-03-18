@@ -276,6 +276,10 @@ export default function MarketPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>('');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [recUniverse, setRecUniverse] = useState<'nifty50' | 'nifty100'>('nifty50');
+  const [intradayRisk, setIntradayRisk] = useState<'atr' | 'fixed'>('atr');
+  const [swingRisk, setSwingRisk] = useState<'atr' | 'fixed'>('atr');
+  const [longRisk, setLongRisk] = useState<'atr' | 'fixed'>('atr');
   const [marketRecs, setMarketRecs] = useState<{
     common: StockRecommendation[];
     intraday: StockRecommendation[];
@@ -313,7 +317,14 @@ export default function MarketPage() {
 
   const fetchMarketRecommendations = useCallback(async () => {
     try {
-      const res = await fetch('/api/recommendations/market?limit=10');
+      const params = new URLSearchParams({
+        limit: '10',
+        universe: recUniverse,
+        intradayRisk,
+        swingRisk,
+        longRisk,
+      });
+      const res = await fetch(`/api/recommendations/market?${params.toString()}`);
       if (!res.ok) return;
       const json = await res.json();
       setMarketRecs({
@@ -326,12 +337,12 @@ export default function MarketPage() {
     } catch {
       // ignore
     }
-  }, []);
+  }, [recUniverse, intradayRisk, swingRisk, longRisk]);
 
   useEffect(() => {
     fetchMarketData();
     fetchMarketRecommendations();
-  }, [fetchMarketData]);
+  }, [fetchMarketData, fetchMarketRecommendations]);
 
   useEffect(() => {
     if (!autoRefresh) return;
@@ -458,6 +469,64 @@ export default function MarketPage() {
                   </p>
                 )}
               </div>
+              <div className="flex items-center gap-2">
+                <select
+                  value={recUniverse}
+                  onChange={(e) => setRecUniverse(e.target.value as any)}
+                  className="h-8 rounded-lg border bg-background px-2 text-[10px] sm:text-xs"
+                >
+                  <option value="nifty50">NIFTY 50</option>
+                  <option value="nifty100">NIFTY 100</option>
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 text-[10px] sm:text-xs"
+                  onClick={() => fetchMarketRecommendations()}
+                >
+                  Refresh
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="flex items-center justify-between rounded-lg border px-2 py-1.5">
+                <span className="text-[10px] sm:text-xs text-muted-foreground">Intraday risk</span>
+                <select
+                  value={intradayRisk}
+                  onChange={(e) => setIntradayRisk(e.target.value as any)}
+                  className="h-7 rounded-md border bg-background px-2 text-[10px] sm:text-xs"
+                >
+                  <option value="atr">ATR</option>
+                  <option value="fixed">Fixed %</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border px-2 py-1.5">
+                <span className="text-[10px] sm:text-xs text-muted-foreground">Swing risk</span>
+                <select
+                  value={swingRisk}
+                  onChange={(e) => setSwingRisk(e.target.value as any)}
+                  className="h-7 rounded-md border bg-background px-2 text-[10px] sm:text-xs"
+                >
+                  <option value="atr">ATR</option>
+                  <option value="fixed">Fixed %</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border px-2 py-1.5">
+                <span className="text-[10px] sm:text-xs text-muted-foreground">Long-term risk</span>
+                <select
+                  value={longRisk}
+                  onChange={(e) => setLongRisk(e.target.value as any)}
+                  className="h-7 rounded-md border bg-background px-2 text-[10px] sm:text-xs"
+                >
+                  <option value="atr">ATR</option>
+                  <option value="fixed">Fixed %</option>
+                </select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
+            <div className="mb-2">
               <Tabs value={recTab} onValueChange={(v) => setRecTab(v as any)}>
                 <TabsList className="h-8" variant="default">
                   <TabsTrigger value="common" className="text-xs px-2 h-7">
@@ -475,8 +544,6 @@ export default function MarketPage() {
                 </TabsList>
               </Tabs>
             </div>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
             <div className="space-y-1.5 sm:space-y-2">
               {(recTab === 'common'
                 ? marketRecs.common
