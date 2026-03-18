@@ -184,3 +184,113 @@ export function computeOverextendedExitSignal({
   };
 }
 
+export function computeIntradayBreakoutSignal({
+  symbol,
+  name,
+  candles,
+}: BuildSignalParams): StrategySignal | null {
+  // Expect 5m candles for last 1 trading day
+  if (candles.length < 40) return null;
+
+  const recentWindow = 20;
+  const recent = candles.slice(-recentWindow - 1);
+  if (recent.length < recentWindow + 1) return null;
+
+  const lastCandle = last(recent)!;
+  const prev = recent.slice(0, -1);
+  const prevHigh = Math.max(...prev.map((c) => c.high));
+  const avgVol = prev.reduce((sum, c) => sum + c.volume, 0) / prev.length || 0;
+
+  // Intraday: tighter volume threshold and faster target
+  const isBreakout =
+    lastCandle.close > prevHigh && lastCandle.volume >= avgVol * 1.3;
+  if (!isBreakout) return null;
+
+  const highs = candles.map((c) => c.high);
+  const lows = candles.map((c) => c.low);
+  const closes = candles.map((c) => c.close);
+  const atr = ATR.calculate({ high: highs, low: lows, close: closes, period: 14 });
+  const lastAtr = last(atr);
+  if (!lastAtr || !isFinite(lastAtr)) return null;
+
+  const entry = lastCandle.close;
+  const stopLoss = entry - 1.2 * lastAtr;
+  const target = entry + 2.4 * lastAtr; // ~2R
+
+  return {
+    id: generateId(symbol, 'intraday_breakout', Date.now()),
+    symbol,
+    name,
+    timeframe: 'intraday',
+    type: 'intraday_breakout',
+    direction: 'buy',
+    entry,
+    stop_loss: stopLoss,
+    target,
+    confidence: 68,
+    reason:
+      'Intraday breakout above recent 5m range with rising volume. Consider strict risk management and time-based exits.',
+    strategy_name: '5m breakout (intraday)',
+    generated_at: new Date().toISOString(),
+  };
+}
+
+export function computePositionalTrendSignal({
+  symbol,
+  name,
+  candles,
+}: BuildSignalParams): StrategySignal | null {
+  // Expect daily candles (1y)
+  if (candles.length < 220) return null;
+  const closes = candles.map((c) => c.close);
+  const sma200 = SMA.calculate({ values: closes, period: 200 });
+  const rsi = RSI.calculate({ values: closes, period: 14 });
+
+  const lastClose = last(closes);
+  const lastSma200 = last(sma200);
+  const lastRsi = last(rsi);
+
+  if (
+    lastClose === undefined ||
+    lastSma200 === undefined ||
+    lastRsi === undefined
+  ) {
+    return null;
+  }
+
+  const uptrend = lastClose > lastSma200;
+  const rsiHealthy = lastRsi >= 45 && lastRsi <= 65;
+  if (!uptrend || !rsiHealthy) return null;
+
+  // Use daily ATR for wider positional stops
+  const atr = ATR.calculate({
+    high: candles.map((c) => c.high),
+    low: candles.map((c) => c.low),
+    close: closes,
+    period: 14,
+  });
+  const lastAtr = last(atr);
+  if (!lastAtr || !isFinite(lastAtr)) return null;
+
+  const entry = lastClose;
+  const stopLoss = entry - 2.5 * lastAtr;
+  const target = entry + 5 * lastAtr;
+
+  return {
+    id: generateId(symbol, 'positional_trend', Date.now()),
+    symbol,
+    name,
+    timeframe: 'positional',
+    type: 'positional_trend',
+    direction: 'buy',
+    entry,
+    stop_loss: stopLoss,
+    target,
+    confidence: 72,
+    reason:
+      'Price is above the 200-day trend baseline with healthy momentum. Suitable for positional holding with wider stop-loss.',
+    strategy_name: 'Trend-follow (SMA200 + RSI)',
+    generated_at: new Date().toISOString(),
+  };
+}
+

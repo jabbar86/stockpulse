@@ -151,7 +151,9 @@ export type StrategyTimeframe = 'intraday' | 'swing' | 'positional';
 
 export type StrategySignalType =
   | 'long_breakout'
+  | 'intraday_breakout'
   | 'pullback_long'
+  | 'positional_trend'
   | 'mean_reversion_long'
   | 'take_profit'
   | 'risk_exit';
