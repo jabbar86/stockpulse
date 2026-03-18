@@ -53,8 +53,9 @@ export default function DashboardPage() {
     intraday: StockRecommendation[];
     swing: StockRecommendation[];
     long_term: StockRecommendation[];
+    common: StockRecommendation[];
   } | null>(null);
-  const [recTab, setRecTab] = useState<'intraday' | 'swing' | 'long_term'>('intraday');
+  const [recTab, setRecTab] = useState<'common' | 'intraday' | 'swing' | 'long_term'>('common');
 
   // Get portfolio holding symbols for live streaming
   const holdingSymbols = useMemo(
@@ -98,6 +99,7 @@ export default function DashboardPage() {
             intraday: data.intraday || [],
             swing: data.swing || [],
             long_term: data.long_term || [],
+            common: data.common || [],
           });
         }
       } catch {
@@ -407,6 +409,9 @@ export default function DashboardPage() {
               </CardTitle>
               <Tabs value={recTab} onValueChange={(v) => setRecTab(v as any)}>
                 <TabsList className="h-8" variant="default">
+                  <TabsTrigger value="common" className="text-xs px-2 h-7">
+                    Common
+                  </TabsTrigger>
                   <TabsTrigger value="intraday" className="text-xs px-2 h-7">
                     Intraday
                   </TabsTrigger>
@@ -422,7 +427,9 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="px-2 sm:px-6 pb-3 sm:pb-6">
             <div className="space-y-1.5 sm:space-y-2">
-              {(recTab === 'intraday'
+              {(recTab === 'common'
+                ? marketRecs.common
+                : recTab === 'intraday'
                 ? marketRecs.intraday
                 : recTab === 'swing'
                 ? marketRecs.swing
@@ -456,6 +463,11 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
+              {recTab === 'common' && marketRecs.common.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No common picks right now.
+                </p>
+              )}
               {recTab === 'intraday' && marketRecs.intraday.length === 0 && (
                 <p className="text-xs text-muted-foreground">
                   No intraday setups right now.

@@ -9,7 +9,8 @@ import {
   computePositionalTrendSignal,
 } from '@/lib/analysis/signals';
 import { buildStockRecommendation } from '@/lib/analysis/stock-recommendation';
-import type { StockRecommendation, StrategySignal, StrategyTimeframe } from '@/types';
+import type { StockRecommendation, StrategySignal } from '@/types';
+import { SMA, RSI, ATR } from 'technicalindicators';
 
 export const maxDuration = 30;
 
@@ -39,6 +40,68 @@ function topN(items: StockRecommendation[], n: number): StockRecommendation[] {
   return [...items].sort((a, b) => b.conviction - a.conviction).slice(0, n);
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function computeCommonTrendRecommendation(
+  symbol: string,
+  name: string,
+  candles: { high: number; low: number; close: number; volume: number }[]
+): StockRecommendation | null {
+  if (candles.length < 220) return null;
+
+  const closes = candles.map((c) => c.close);
+  const highs = candles.map((c) => c.high);
+  const lows = candles.map((c) => c.low);
+
+  const sma50 = SMA.calculate({ values: closes, period: 50 });
+  const sma200 = SMA.calculate({ values: closes, period: 200 });
+  const rsi14 = RSI.calculate({ values: closes, period: 14 });
+  const atr14 = ATR.calculate({ high: highs, low: lows, close: closes, period: 14 });
+
+  const lastClose = closes[closes.length - 1];
+  const s50 = sma50[sma50.length - 1];
+  const s200 = sma200[sma200.length - 1];
+  const rsi = rsi14[rsi14.length - 1];
+  const atr = atr14[atr14.length - 1];
+
+  if (![lastClose, s50, s200, rsi, atr].every((v) => typeof v === 'number' && isFinite(v))) {
+    return null;
+  }
+
+  const trendScore =
+    (lastClose > s200 ? 40 : 0) +
+    (s50 > s200 ? 25 : 0) +
+    clamp((rsi - 50) * 1.2, -20, 20);
+
+  const conviction = clamp(Math.round(trendScore), 40, 85);
+  const action: StockRecommendation['action'] = conviction >= 70 ? 'buy' : 'hold';
+
+  const entry = lastClose;
+  const stopLoss = entry - 2.2 * atr;
+  const target = entry + 4.4 * atr;
+
+  const reason =
+    action === 'buy'
+      ? 'Strong trend structure (price above 200D baseline, 50D above 200D) with healthy momentum.'
+      : 'Stable trend bias. Keep on watch; consider entries on pullbacks with defined risk.';
+
+  return {
+    symbol,
+    name,
+    timeframe: 'positional',
+    action,
+    conviction,
+    entry,
+    stop_loss: stopLoss,
+    target,
+    reason,
+    source_signal: 'positional_trend',
+    generated_at: new Date().toISOString(),
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -57,6 +120,7 @@ export async function GET(request: NextRequest) {
     const intraday: StockRecommendation[] = [];
     const swing: StockRecommendation[] = [];
     const positional: StockRecommendation[] = [];
+    const common: StockRecommendation[] = [];
 
     for (const { symbol, name } of MARKET_UNIVERSE) {
       // Intraday (5m)
@@ -95,6 +159,10 @@ export async function GET(request: NextRequest) {
         if (trend) s.push(trend);
         const rec = buildStockRecommendation(symbol, name, s);
         if (rec) positional.push(rec);
+
+        // Common tab: always try to produce a “best overall” list
+        const commonRec = computeCommonTrendRecommendation(symbol, name, candles);
+        if (commonRec) common.push(commonRec);
       } catch {
         // ignore
       }
@@ -104,6 +172,7 @@ export async function GET(request: NextRequest) {
       intraday: topN(intraday, limit),
       swing: topN(swing, limit),
       long_term: topN(positional, limit),
+      common: topN(common, limit),
       generatedAt: new Date().toISOString(),
       universeSize: MARKET_UNIVERSE.length,
     });
