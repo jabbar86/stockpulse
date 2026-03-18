@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Newspaper,
   LifeBuoy,
+  Banknote,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -23,6 +24,7 @@ const navItems = [
   { href: '/market', label: 'Market', icon: BarChart3 },
   { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { href: '/stocks', label: 'Stocks', icon: TrendingUp },
+  { href: '/mutual-funds', label: 'Mutual Funds', icon: Banknote },
   { href: '/news', label: 'News', icon: Newspaper },
   { href: '/brokers', label: 'Connect', icon: Link2 },
   { href: '/support', label: 'Support', icon: LifeBuoy },

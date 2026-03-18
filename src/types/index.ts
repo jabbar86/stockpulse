@@ -188,6 +188,23 @@ export interface StockRecommendation {
   generated_at: string;
 }
 
+// Mutual Funds (India)
+export interface MutualFundSearchResult {
+  schemeCode: number;
+  schemeName: string;
+}
+
+export interface MutualFundNavPoint {
+  date: string; // DD-MM-YYYY (mfapi)
+  nav: number;
+}
+
+export interface MutualFundDetails {
+  schemeCode: number;
+  schemeName: string;
+  nav: MutualFundNavPoint[];
+}
+
 // Broker types
 export interface BrokerConnection {
   id: string;
