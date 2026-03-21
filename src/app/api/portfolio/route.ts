@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { loadPortfolioForUserId } from '@/lib/portfolio/load-for-user';
 import { z } from 'zod';
-import type { HoldingWithMetrics, PortfolioSummary } from '@/types';
 
 export const maxDuration = 30;
 
@@ -32,65 +32,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const serviceClient = createServiceRoleClient();
-    const { data: holdings, error } = await serviceClient
-      .from('holdings')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      return NextResponse.json({ error: 'Failed to fetch holdings' }, { status: 500 });
+    const loaded = await loadPortfolioForUserId(userId);
+    if (!loaded.ok) {
+      return NextResponse.json({ error: loaded.error }, { status: 500 });
     }
 
-    if (!holdings || holdings.length === 0) {
-      const emptySummary: PortfolioSummary = {
-        total_invested: 0,
-        current_value: 0,
-        total_pnl: 0,
-        total_pnl_percent: 0,
-        day_change: 0,
-        day_change_percent: 0,
-        holdings_count: 0,
-        top_gainers: [],
-        top_losers: [],
-      };
-      return NextResponse.json({ holdings: [], summary: emptySummary });
-    }
-
-    // Return holdings with invested-value metrics only (no live price fetch).
-    // Live prices are overlaid client-side via useLivePrices polling hook,
-    // which dramatically cuts initial load time.
-    const totalInvested = holdings.reduce((sum, h) => sum + h.avg_price * h.quantity, 0);
-
-    const enrichedHoldings: HoldingWithMetrics[] = holdings.map((h) => {
-      const investedValue = h.avg_price * h.quantity;
-      return {
-        ...h,
-        current_price: h.avg_price,
-        current_value: investedValue,
-        invested_value: investedValue,
-        pnl: 0,
-        pnl_percent: 0,
-        day_change: 0,
-        day_change_percent: 0,
-        allocation_percent: totalInvested > 0 ? (investedValue / totalInvested) * 100 : 0,
-      };
-    });
-
-    const summary: PortfolioSummary = {
-      total_invested: totalInvested,
-      current_value: totalInvested,
-      total_pnl: 0,
-      total_pnl_percent: 0,
-      day_change: 0,
-      day_change_percent: 0,
-      holdings_count: holdings.length,
-      top_gainers: [],
-      top_losers: [],
-    };
-
-    return NextResponse.json({ holdings: enrichedHoldings, summary });
+    return NextResponse.json(loaded.data);
   } catch (error) {
     console.error('Portfolio GET error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

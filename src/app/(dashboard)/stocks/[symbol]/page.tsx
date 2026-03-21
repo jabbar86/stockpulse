@@ -23,7 +23,7 @@ import {
   WifiIcon,
   StarIcon,
 } from 'lucide-react';
-import Link from 'next/link';
+import { DashboardLink } from '@/components/dashboard/dashboard-link';
 import { useLivePrices } from '@/hooks/use-live-prices';
 
 const CandlestickChart = dynamic(() => import('@/components/stocks/candlestick-chart'), {
@@ -293,13 +293,13 @@ export default function StockAnalysisPage() {
   return (
     <div className="space-y-6">
       {/* Back Button */}
-      <Link
+      <DashboardLink
         href="/stocks"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeftIcon className="size-4" />
         Back to Stocks
-      </Link>
+      </DashboardLink>
 
       {/* Price Header */}
       <div className="space-y-2">

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useOptionalNavigationPending } from '@/components/dashboard/navigation-pending-context';
 import type { BrokerConnection } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -171,6 +172,7 @@ const AUTO_SYNC_INTERVAL = 5 * 60 * 1000;
 
 export default function BrokersPage() {
   const router = useRouter();
+  const navPending = useOptionalNavigationPending();
   const [connections, setConnections] = useState<Record<string, BrokerConnection | null>>({});
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -424,7 +426,14 @@ export default function BrokersPage() {
                   Add stocks one by one with quantity and buy price
                 </p>
               </div>
-              <Button size="sm" variant="outline" onClick={() => router.push('/portfolio')} className="shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  navPending ? navPending.navigate('/portfolio') : router.push('/portfolio')
+                }
+                className="shrink-0"
+              >
                 <PlusIcon className="size-3.5 mr-1" />
                 Add
               </Button>
@@ -713,7 +722,9 @@ export default function BrokersPage() {
       <CSVImportDialog
         open={csvOpen}
         onOpenChange={setCsvOpen}
-        onSuccess={() => router.push('/portfolio')}
+        onSuccess={() =>
+          navPending ? navPending.navigate('/portfolio') : router.push('/portfolio')
+        }
       />
     </div>
   );

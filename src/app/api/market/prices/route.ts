@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import YahooFinance from 'yahoo-finance2';
+import {
+  getNseSession,
+  getPriceCacheFreshTtlMs,
+  getPriceCacheStaleMaxMs,
+} from '@/lib/market/nse-session';
 
 // Allow up to 30s on Vercel Hobby plan (default is 10s)
 export const maxDuration = 30;
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
-
-// NSE holidays (MM-DD)
-const NSE_HOLIDAYS = new Set([
-  '01-26', '02-26', '03-14', '03-31', '04-10', '04-14', '04-18',
-  '05-01', '06-27', '08-15', '08-16', '08-27', '10-02', '10-20',
-  '10-21', '10-22', '11-05', '11-26', '12-25',
-]);
 
 interface PriceUpdate {
   symbol: string;
@@ -22,99 +20,53 @@ interface PriceUpdate {
   timestamp: number;
 }
 
-function getISTParts(): { year: number; month: number; day: number; hour: number; minute: number } {
-  const dtf = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const parts = dtf.formatToParts(new Date());
-  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
-  return {
-    year: get('year'),
-    month: get('month'),
-    day: get('day'),
-    hour: get('hour'),
-    minute: get('minute'),
-  };
-}
-
-function getMarketStatus() {
-  const ist = getISTParts();
-  const dayOfWeek = new Date(Date.UTC(ist.year, ist.month - 1, ist.day)).getUTCDay();
-  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-  const mmdd = `${String(ist.month).padStart(2, '0')}-${String(ist.day).padStart(2, '0')}`;
-  const isHoliday = NSE_HOLIDAYS.has(mmdd);
-
-  if (isWeekend || isHoliday) {
-    return { isOpen: false, isWeekend, isHoliday };
-  }
-
-  const mins = ist.hour * 60 + ist.minute;
-  const isOpen = mins >= 555 && mins <= 930; // 9:15 AM - 3:30 PM IST
-
-  return { isOpen, isWeekend, isHoliday };
+function symbolKey(sym: string): string {
+  return sym.replace('.NS', '').replace('.BO', '');
 }
 
 // ---------------------------------------------------------------------------
-// In-memory price cache — avoids hammering Yahoo on every poll
+// In-memory price cache — process-local; longer TTL when NSE is closed
 // ---------------------------------------------------------------------------
 const priceCache = new Map<string, PriceUpdate>();
 let cacheUpdatedAt = 0;
 let cacheTradingDate = '';
 
-function getISTDateString(): string {
-  const ist = getISTParts();
-  return `${ist.year}-${String(ist.month).padStart(2, '0')}-${String(ist.day).padStart(2, '0')}`;
-}
-
-// TTLs: 15s during market hours, 5 min after hours
-function getCacheTTL(isOpen: boolean): number {
-  return isOpen ? 15_000 : 300_000;
-}
-
-function getCachedPrices(symbols: string[], isOpen: boolean): PriceUpdate[] | null {
-  // Invalidate stale cache from previous trading day
-  const today = getISTDateString();
-  if (cacheTradingDate && cacheTradingDate !== today) {
-    priceCache.clear();
-    cacheUpdatedAt = 0;
-    cacheTradingDate = '';
-  }
-
-  if (priceCache.size === 0) return null;
-  if (Date.now() - cacheUpdatedAt > getCacheTTL(isOpen)) return null;
-
-  const results: PriceUpdate[] = [];
-  for (const sym of symbols) {
-    const key = sym.replace('.NS', '').replace('.BO', '');
-    const cached = priceCache.get(key);
-    if (cached) results.push(cached);
-  }
-  // Only use cache if we have at least half the requested symbols
-  return results.length >= symbols.length * 0.5 ? results : null;
-}
-
-function updatePriceCache(prices: PriceUpdate[]): void {
+function updatePriceCache(prices: PriceUpdate[], istDateKey: string): void {
   for (const p of prices) {
     priceCache.set(p.symbol, p);
   }
   cacheUpdatedAt = Date.now();
-  cacheTradingDate = getISTDateString();
+  cacheTradingDate = istDateKey;
 }
 
 // Default symbols
 const DEFAULT_SYMBOLS = [
-  '^NSEI', '^BSESN', '^NSEBANK',
-  'GC=F', 'SI=F', 'CL=F',
-  'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
-  'HINDUNILVR.NS', 'SBIN.NS', 'BHARTIARTL.NS', 'KOTAKBANK.NS', 'ITC.NS',
-  'LT.NS', 'AXISBANK.NS', 'BAJFINANCE.NS', 'WIPRO.NS', 'HCLTECH.NS',
-  'TATAMOTORS.NS', 'TATASTEEL.NS', 'SUNPHARMA.NS', 'NTPC.NS', 'MARUTI.NS',
+  '^NSEI',
+  '^BSESN',
+  '^NSEBANK',
+  'GC=F',
+  'SI=F',
+  'CL=F',
+  'RELIANCE.NS',
+  'TCS.NS',
+  'HDFCBANK.NS',
+  'INFY.NS',
+  'ICICIBANK.NS',
+  'HINDUNILVR.NS',
+  'SBIN.NS',
+  'BHARTIARTL.NS',
+  'KOTAKBANK.NS',
+  'ITC.NS',
+  'LT.NS',
+  'AXISBANK.NS',
+  'BAJFINANCE.NS',
+  'WIPRO.NS',
+  'HCLTECH.NS',
+  'TATAMOTORS.NS',
+  'TATASTEEL.NS',
+  'SUNPHARMA.NS',
+  'NTPC.NS',
+  'MARUTI.NS',
 ];
 
 async function fetchPrices(symbols: string[]): Promise<PriceUpdate[]> {
@@ -148,51 +100,117 @@ async function fetchPrices(symbols: string[]): Promise<PriceUpdate[]> {
   return updates;
 }
 
+async function resolvePrices(
+  requestedSymbols: string[],
+  session: ReturnType<typeof getNseSession>
+): Promise<{ prices: PriceUpdate[]; source: string }> {
+  const today = session.istDateKey;
+  if (cacheTradingDate && cacheTradingDate !== today) {
+    priceCache.clear();
+    cacheUpdatedAt = 0;
+    cacheTradingDate = '';
+  }
+
+  const keys = requestedSymbols.map(symbolKey);
+  const age = Date.now() - cacheUpdatedAt;
+  const freshTtl = getPriceCacheFreshTtlMs(session);
+  const staleMax = getPriceCacheStaleMaxMs(session);
+  const cacheValidFresh = age <= freshTtl;
+  const cacheValidClosed = !session.isOpen && staleMax > 0 && age <= staleMax;
+  const useCacheLayer = cacheValidFresh || cacheValidClosed;
+
+  const missingSymbols = requestedSymbols.filter((s) => !priceCache.has(symbolKey(s)));
+
+  if (missingSymbols.length === 0 && useCacheLayer && priceCache.size > 0) {
+    const list = keys.map((k) => priceCache.get(k)).filter(Boolean) as PriceUpdate[];
+    if (list.length === keys.length) {
+      return {
+        prices: list,
+        source: cacheValidFresh ? 'cache' : 'cache-stale',
+      };
+    }
+  }
+
+  if (missingSymbols.length > 0 && useCacheLayer) {
+    const haveCount = keys.length - missingSymbols.length;
+    const half = keys.length * 0.5;
+    if (haveCount >= half || (session.isOpen && haveCount > 0)) {
+      const fetched = await fetchPrices(missingSymbols);
+      for (const p of fetched) {
+        priceCache.set(p.symbol, p);
+      }
+      cacheUpdatedAt = Date.now();
+      cacheTradingDate = today;
+      const list = keys.map((k) => priceCache.get(k)).filter(Boolean) as PriceUpdate[];
+      if (list.length === keys.length) {
+        return {
+          prices: list,
+          source: haveCount > 0 ? 'cache+live' : 'live',
+        };
+      }
+    }
+  }
+
+  const all = await fetchPrices(requestedSymbols);
+  updatePriceCache(all, today);
+  return { prices: all, source: 'live' };
+}
+
 export async function GET(request: NextRequest) {
   const symbolsParam = request.nextUrl.searchParams.get('symbols');
   const requestedSymbols = symbolsParam
     ? symbolsParam.split(',').map((s) => {
         const trimmed = s.trim().toUpperCase();
-        if (trimmed.endsWith('.NS') || trimmed.endsWith('.BO') || trimmed.startsWith('^') || trimmed.includes('=')) {
+        if (
+          trimmed.endsWith('.NS') ||
+          trimmed.endsWith('.BO') ||
+          trimmed.startsWith('^') ||
+          trimmed.includes('=')
+        ) {
           return trimmed;
         }
         return `${trimmed}.NS`;
       })
     : DEFAULT_SYMBOLS;
 
-  const market = getMarketStatus();
+  const session = getNseSession();
 
   try {
-    // Serve from cache if fresh enough
-    const cached = getCachedPrices(requestedSymbols, market.isOpen);
-    const prices = cached ?? await fetchPrices(requestedSymbols);
+    const { prices, source } = await resolvePrices(requestedSymbols, session);
 
-    if (!cached) {
-      updatePriceCache(prices);
-    }
-
-    const message = market.isOpen
+    const message = session.isOpen
       ? undefined
-      : market.isWeekend
-      ? 'Market closed — weekend'
-      : market.isHoliday
-      ? 'Market closed — holiday'
-      : 'Market closed — after hours';
+      : session.isWeekend
+        ? 'Market closed — weekend'
+        : session.isHoliday
+          ? 'Market closed — holiday'
+          : 'Market closed — after hours';
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       prices,
       marketStatus: {
-        isOpen: market.isOpen,
-        isWeekend: market.isWeekend,
-        isHoliday: market.isHoliday,
+        isOpen: session.isOpen,
+        isWeekend: session.isWeekend,
+        isHoliday: session.isHoliday,
         message,
       },
-      source: cached ? 'cache' : 'live',
+      source,
       timestamp: Date.now(),
     });
+
+    // When NSE is shut, allow short browser/CDN caching per URL (same quotes for everyone)
+    if (!session.isOpen) {
+      const maxAge = Math.floor(getPriceCacheFreshTtlMs(session) / 1000);
+      res.headers.set(
+        'Cache-Control',
+        `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`
+      );
+    }
+
+    return res;
   } catch {
     return NextResponse.json(
-      { error: 'Failed to fetch prices', marketStatus: market },
+      { error: 'Failed to fetch prices', marketStatus: session },
       { status: 500 }
     );
   }

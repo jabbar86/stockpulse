@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useOptionalNavigationPending } from '@/components/dashboard/navigation-pending-context';
 import type { Stock } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,7 @@ function formatPercent(value: number): string {
 
 export default function StocksPage() {
   const router = useRouter();
+  const navPending = useOptionalNavigationPending();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Stock[]>([]);
   const [searching, setSearching] = useState(false);
@@ -120,7 +122,12 @@ export default function StocksPage() {
 
   const handleStockClick = (symbol: string, exchange?: string) => {
     const params = exchange === 'BSE' ? '?exchange=BSE' : '';
-    router.push(`/stocks/${symbol}${params}`);
+    const href = `/stocks/${symbol}${params}`;
+    if (navPending) {
+      navPending.navigate(href);
+    } else {
+      router.push(href);
+    }
   };
 
   const watchlistArray = useMemo(

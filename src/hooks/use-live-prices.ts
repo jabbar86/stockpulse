@@ -34,6 +34,8 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
   const [connected, setConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [marketStatus, setMarketStatus] = useState<MarketStatus>({ isOpen: false });
+  /** First successful (or failed) quote tick finished — use to avoid empty-index flash */
+  const [quotesReady, setQuotesReady] = useState(false);
   const prevPricesRef = useRef<Map<string, number>>(new Map());
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const symbolsKeyRef = useRef('');
@@ -77,15 +79,20 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
         });
       }
 
+      setQuotesReady(true);
       return data.marketStatus?.isOpen ?? false;
     } catch {
       setConnected(false);
+      setQuotesReady(true);
       return null;
     }
   }, []);
 
   useEffect(() => {
-    if (!enabled || !symbolsKey) return;
+    if (!enabled || !symbolsKey) {
+      setQuotesReady(false);
+      return;
+    }
 
     // Clear previous interval if symbols changed
     if (intervalRef.current) {
@@ -93,6 +100,7 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
       intervalRef.current = null;
     }
     symbolsKeyRef.current = symbolsKey;
+    setQuotesReady(false);
 
     let cancelled = false;
     let isOpen = false;
@@ -143,5 +151,6 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
     lastUpdate,
     getPrice,
     marketStatus,
+    quotesReady,
   };
 }

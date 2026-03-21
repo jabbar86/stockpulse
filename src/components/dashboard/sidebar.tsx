@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { DashboardLink } from '@/components/dashboard/dashboard-link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth/session-provider';
 import { cn } from '@/lib/utils';
@@ -16,19 +16,36 @@ import {
   Newspaper,
   LifeBuoy,
   Banknote,
+  CalendarDays,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/market', label: 'Market', icon: BarChart3 },
+  {
+    href: '/dashboard',
+    label: 'Dashboard',
+    description: 'Your portfolio, P&L & quick picks',
+    icon: LayoutDashboard,
+  },
+  {
+    href: '/today',
+    label: 'Today',
+    description: 'Daily briefing, journal & reminders',
+    icon: CalendarDays,
+  },
+  {
+    href: '/market',
+    label: 'Market',
+    description: 'Indices, sectors & NIFTY ideas',
+    icon: BarChart3,
+  },
   { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
   { href: '/stocks', label: 'Stocks', icon: TrendingUp },
   { href: '/mutual-funds', label: 'Mutual Funds', icon: Banknote },
   { href: '/news', label: 'News', icon: Newspaper },
   { href: '/brokers', label: 'Connect', icon: Link2 },
   { href: '/support', label: 'Support', icon: LifeBuoy },
-];
+] as const;
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -45,12 +62,12 @@ export default function Sidebar() {
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 bg-sidebar border-r border-sidebar-border md:flex flex-col">
       <div className="p-5 border-b border-sidebar-border">
-        <Link href="/dashboard" className="flex items-center gap-3">
+        <DashboardLink href="/dashboard" className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-md">
             <LineChart className="size-5" />
           </div>
           <span className="font-bold text-xl tracking-tight text-sidebar-foreground">StockPulse</span>
-        </Link>
+        </DashboardLink>
       </div>
 
       <nav className="flex-1 p-3 space-y-1 mt-1">
@@ -58,27 +75,39 @@ export default function Sidebar() {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + '/');
           return (
-            <Link
+            <DashboardLink
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all',
+                'flex items-start gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all',
                 isActive
                   ? 'bg-sidebar-primary text-sidebar-primary-foreground shadow-md'
                   : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent'
               )}
             >
-              <item.icon className="size-5" />
-              {item.label}
-              {isActive && <ChevronRight className="size-4 ml-auto opacity-70" />}
-            </Link>
+              <item.icon className="size-5 shrink-0 mt-0.5" />
+              <span className="flex-1 min-w-0 leading-snug">
+                <span className="block">{item.label}</span>
+                {'description' in item && item.description ? (
+                  <span
+                    className={cn(
+                      'block text-xs font-normal mt-0.5',
+                      isActive ? 'text-sidebar-primary-foreground/80' : 'text-sidebar-foreground/50'
+                    )}
+                  >
+                    {item.description}
+                  </span>
+                ) : null}
+              </span>
+              {isActive && <ChevronRight className="size-4 shrink-0 mt-1 opacity-70" />}
+            </DashboardLink>
           );
         })}
       </nav>
 
       <div className="p-3 border-t border-sidebar-border">
         {/* User profile — links to profile page */}
-        <Link
+        <DashboardLink
           href="/profile"
           className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-sidebar-accent transition-colors"
         >
@@ -94,7 +123,7 @@ export default function Sidebar() {
             )}
           </div>
           <ChevronRight className="size-4 text-sidebar-foreground/30" />
-        </Link>
+        </DashboardLink>
       </div>
     </aside>
   );

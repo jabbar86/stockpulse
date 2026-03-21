@@ -174,3 +174,5 @@ create policy "Service can manage premium requests" on premium_requests for all 
 create policy "Users can view own support requests" on support_requests for select using (auth.uid() = user_id);
 create policy "Users can insert support requests" on support_requests for insert with check (auth.uid() = user_id);
 create policy "Service can manage support requests" on support_requests for all using (true);
+
+-- Today hub tables: apply supabase/migrations/002_today_workspace.sql in Supabase (SQL editor) after initial schema.

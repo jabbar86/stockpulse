@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
-import nodemailer from 'nodemailer';
+import { isResendConfigured, sendTransactionalEmail } from '@/lib/email/resend-transactional';
 
-const ADMIN_EMAIL = 'memonjabbar2@gmail.com';
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,34 +38,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit request' }, { status: 500 });
     }
 
-    // Send email notification to admin via Gmail
-    if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-      try {
-        const transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_APP_PASSWORD,
-          },
-        });
-
-        await transporter.sendMail({
-          from: `StockAnalysis <${process.env.GMAIL_USER}>`,
-          to: ADMIN_EMAIL,
-          subject: `Premium Access Request — ${name?.trim() || email.trim()}`,
-          html: `
+    const adminTo = process.env.ADMIN_NOTIFY_EMAIL?.trim();
+    if (adminTo && isResendConfigured()) {
+      const html = `
             <h2>New Premium Access Request</h2>
             <table style="border-collapse:collapse;width:100%;max-width:500px;">
-              <tr><td style="padding:8px;font-weight:bold;">Name</td><td style="padding:8px;">${name?.trim() || '—'}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Email</td><td style="padding:8px;">${email.trim()}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">User ID</td><td style="padding:8px;font-size:12px;">${user.id}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Message</td><td style="padding:8px;">${message?.trim() || '—'}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Name</td><td style="padding:8px;">${escapeHtml(name?.trim() || '—')}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Email</td><td style="padding:8px;">${escapeHtml(email.trim())}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">User ID</td><td style="padding:8px;font-size:12px;">${escapeHtml(user.id)}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Message</td><td style="padding:8px;">${escapeHtml(message?.trim() || '—')}</td></tr>
             </table>
-          `,
-        });
-      } catch (emailError) {
-        console.error('Failed to send admin email:', emailError);
-        // Don't fail the request if email fails — the DB record is saved
+          `;
+      const result = await sendTransactionalEmail({
+        to: adminTo,
+        subject: `Premium Access Request — ${name?.trim() || email.trim()}`,
+        html,
+        text: `Premium request\nName: ${name?.trim() || '—'}\nEmail: ${email.trim()}\nUser: ${user.id}\nMessage: ${message?.trim() || '—'}`,
+      });
+      if (!result.ok) {
+        console.error('Failed to send admin email:', result.error);
       }
     }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { DashboardLink } from '@/components/dashboard/dashboard-link';
 import dynamic from 'next/dynamic';
 import type {
   PortfolioSummary,
@@ -212,8 +213,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-center gap-2">
-        <h1 className="text-lg sm:text-3xl font-bold">Dashboard</h1>
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-lg sm:text-3xl font-bold">Dashboard</h1>
         {holdingSymbols.length > 0 && (
           marketStatus.isOpen ? (
             <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full ${
@@ -247,6 +249,22 @@ export default function DashboardPage() {
             Updated: {liveLastUpdate.toLocaleTimeString('en-IN')}
           </span>
         )}
+        </div>
+        <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
+          Your holdings, allocation, and a snapshot of strategy signals plus watchlist-style picks. For a daily
+          briefing vs Nifty/Sensex, what moved your book, and journal/reminders, open{' '}
+          <DashboardLink href="/today" className="text-primary font-medium underline-offset-4 hover:underline">
+            Today
+          </DashboardLink>
+          . For indices, commodities, sectors, and NIFTY 50/100 trade ideas, open{' '}
+          <DashboardLink
+            href="/market#market-recommendations"
+            className="text-primary font-medium underline-offset-4 hover:underline"
+          >
+            Market
+          </DashboardLink>
+          .
+        </p>
       </div>
 
       {/* Summary Cards */}

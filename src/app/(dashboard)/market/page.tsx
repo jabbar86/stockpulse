@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useOptionalNavigationPending } from '@/components/dashboard/navigation-pending-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,6 +38,7 @@ import MarketPulse from '@/components/market/market-pulse';
 import { useLivePrices, type LivePrice } from '@/hooks/use-live-prices';
 import type { StockRecommendation } from '@/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 interface MarketItem {
   symbol: string;
@@ -213,42 +215,52 @@ function StockCard({
     : livePrice?.direction === 'down'
     ? 'animate-flash-red'
     : '';
+  const displaySymbol = item.symbol.replace('.NS', '').replace('.BO', '');
 
   return (
     <button
-      className={`text-left p-3 sm:p-4 rounded-xl border bg-card hover:shadow-md active:scale-[0.98] transition-all group ${flashClass}`}
+      type="button"
       onClick={onClick}
+      className={cn(
+        flashClass,
+        'group w-full text-left rounded-xl border border-border/70 bg-card',
+        'shadow-none transition-[box-shadow,background-color,border-color] duration-200',
+        'hover:border-primary/25 hover:bg-muted/30 hover:shadow-sm',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        isPositive
+          ? 'border-l-[3px] border-l-emerald-600 dark:border-l-emerald-500'
+          : 'border-l-[3px] border-l-red-500 dark:border-l-red-500'
+      )}
     >
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <p className="font-semibold text-sm sm:text-base truncate">{item.symbol.replace('.NS', '').replace('.BO', '')}</p>
-        <span
-          className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs sm:text-sm font-semibold tabular-nums ${
-            isPositive
-              ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-              : 'bg-red-500/10 text-red-600 dark:text-red-400'
-          }`}
-        >
-          {isPositive ? (
-            <TrendingUpIcon className="size-3" />
-          ) : (
-            <TrendingDownIcon className="size-3" />
-          )}
-          {isPositive ? '+' : ''}
-          {changePercent.toFixed(2)}%
-        </span>
-      </div>
-      <p className="text-lg sm:text-xl font-bold tabular-nums">{formatNumber(price)}</p>
-      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
-        {item.name}
-      </p>
-      {/* Mini price bar */}
-      <div className="mt-2 h-1 rounded-full bg-muted overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${
-            isPositive ? 'bg-green-500' : 'bg-red-500'
-          }`}
-          style={{ width: `${Math.min(100, Math.abs(changePercent) * 15)}%` }}
-        />
+      <div className="px-3 py-3 sm:px-3.5 sm:py-3.5">
+        <div className="flex items-start justify-between gap-2">
+          <span className="min-w-0 font-mono text-[11px] font-semibold uppercase tracking-wider text-muted-foreground truncate">
+            {displaySymbol}
+          </span>
+          <span
+            className={cn(
+              'shrink-0 font-mono text-[11px] font-semibold tabular-nums',
+              isPositive
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : 'text-red-600 dark:text-red-400'
+            )}
+          >
+            {isPositive ? '+' : ''}
+            {changePercent.toFixed(2)}%
+          </span>
+        </div>
+
+        <p className="mt-2 font-mono text-base sm:text-lg font-semibold tabular-nums tracking-tight text-foreground">
+          {formatNumber(price)}
+        </p>
+        <p className="mt-0.5 font-mono text-[10px] sm:text-[11px] tabular-nums text-muted-foreground">
+          {formatNumber(change)}{' '}
+          <span className="font-sans text-muted-foreground/75">vs prev. close</span>
+        </p>
+
+        <p className="mt-2.5 border-t border-border/50 pt-2.5 text-[11px] sm:text-xs leading-snug text-muted-foreground line-clamp-2">
+          {item.name}
+        </p>
       </div>
     </button>
   );
@@ -271,6 +283,7 @@ const SECTOR_ICONS: Record<string, React.ElementType> = {
 
 export default function MarketPage() {
   const router = useRouter();
+  const navPending = useOptionalNavigationPending();
   const [data, setData] = useState<MarketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -366,7 +379,12 @@ export default function MarketPage() {
       .replace('.BO', '')
       .replace('^', '')
       .replace('=F', '');
-    router.push(`/stocks/${cleanSymbol}`);
+    const href = `/stocks/${cleanSymbol}`;
+    if (navPending) {
+      navPending.navigate(href);
+    } else {
+      router.push(href);
+    }
   };
 
   if (loading) {
@@ -458,7 +476,7 @@ export default function MarketPage() {
 
       {/* Recommendations */}
       {marketRecs && (
-        <Card>
+        <Card id="market-recommendations" className="scroll-mt-20">
           <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-5 pb-2">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">

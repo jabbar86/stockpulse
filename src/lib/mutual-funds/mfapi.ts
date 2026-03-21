@@ -2,6 +2,17 @@ import type { MutualFundDetails, MutualFundSearchResult } from '@/types';
 
 const BASE_URL = 'https://api.mfapi.in';
 
+/** Bound upstream latency so route handlers return instead of hanging indefinitely. */
+const DEFAULT_FETCH_TIMEOUT_MS = 12_000;
+
+function fetchTimeoutMs(): number {
+  const raw = process.env.MFAPI_FETCH_TIMEOUT_MS;
+  if (!raw) return DEFAULT_FETCH_TIMEOUT_MS;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return DEFAULT_FETCH_TIMEOUT_MS;
+  return Math.min(Math.floor(n), 60_000);
+}
+
 type CacheEntry<T> = { data: T; fetchedAt: number };
 const cache = new Map<string, CacheEntry<unknown>>();
 
@@ -17,11 +28,19 @@ function setCached<T>(key: string, data: T): void {
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'StockPulse/1.0' },
-    // Next.js route handlers run on server; keep it uncached here and rely on our TTL cache
-    cache: 'no-store',
-  });
+  const ms = fetchTimeoutMs();
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: { 'User-Agent': 'StockPulse/1.0' },
+      // Next.js route handlers run on server; keep it uncached here and rely on our TTL cache
+      cache: 'no-store',
+      signal: AbortSignal.timeout(ms),
+    });
+  } catch (e) {
+    const aborted = e instanceof Error && e.name === 'AbortError';
+    throw new Error(aborted ? `MFAPI request timed out after ${ms}ms` : 'MFAPI request failed');
+  }
   if (!res.ok) {
     throw new Error(`MFAPI request failed: ${res.status}`);
   }

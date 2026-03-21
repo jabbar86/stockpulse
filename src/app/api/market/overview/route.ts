@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import YahooFinance from 'yahoo-finance2';
+import { getNseSession, getOverviewCacheTtlMs } from '@/lib/market/nse-session';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
@@ -200,53 +201,35 @@ function ozToInrPerKg(usdPerOz: number, usdInr: number): number {
   return Math.round((usdPerOz / TROY_OZ_TO_GRAMS) * 1000 * usdInr * INDIA_MARKUP);
 }
 
-// ── Smart cache: 5 min during market hours, 30 min after hours, 2 hr on weekends/holidays ──
+// ── In-memory full payload cache (process-local) — TTL from shared NSE session policy ──
 let cachedResponse: object | null = null;
 let cachedAt = 0;
+let cachedForIstDate = '';
 
-// NSE holidays 2025-2026 (MM-DD format, update yearly)
-const NSE_HOLIDAYS = new Set([
-  '01-26', '02-26', '03-14', '03-31', '04-10', '04-14', '04-18',
-  '05-01', '06-27', '08-15', '08-16', '08-27', '10-02', '10-20',
-  '10-21', '10-22', '11-05', '11-26', '12-25',
-]);
-
-function getCacheTtlMs(): number {
-  const now = new Date();
-  // Convert to IST (UTC+5:30)
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
-
-  const day = ist.getDay(); // 0=Sun, 6=Sat
-  const hours = ist.getHours();
-  const minutes = ist.getMinutes();
-  const timeInMinutes = hours * 60 + minutes;
-  const mmdd = `${String(ist.getMonth() + 1).padStart(2, '0')}-${String(ist.getDate()).padStart(2, '0')}`;
-
-  // Weekend or holiday → 2 hours
-  if (day === 0 || day === 6 || NSE_HOLIDAYS.has(mmdd)) {
-    return 2 * 60 * 60 * 1000;
+function jsonWithCacheHeaders(body: object, session: ReturnType<typeof getNseSession>) {
+  const res = NextResponse.json(body);
+  if (!session.isOpen) {
+    const ttlMs = getOverviewCacheTtlMs(session);
+    const sec = Math.max(60, Math.floor(ttlMs / 1000));
+    res.headers.set('Cache-Control', `public, s-maxage=${sec}, stale-while-revalidate=${sec * 2}`);
   }
-
-  // Market hours: 9:15 AM - 3:30 PM IST
-  const marketOpen = 9 * 60 + 15;  // 555
-  const marketClose = 15 * 60 + 30; // 930
-
-  if (timeInMinutes >= marketOpen && timeInMinutes <= marketClose) {
-    return 5 * 60 * 1000; // 5 min during trading
-  }
-
-  // After hours on a weekday → 30 min
-  return 30 * 60 * 1000;
+  return res;
 }
 
 // GET /api/market/overview
 export async function GET() {
   try {
-    // Return cached data if fresh
-    const ttl = getCacheTtlMs();
+    const session = getNseSession();
+    const ttl = getOverviewCacheTtlMs(session);
+
+    if (cachedForIstDate && cachedForIstDate !== session.istDateKey) {
+      cachedResponse = null;
+      cachedAt = 0;
+      cachedForIstDate = '';
+    }
+
     if (cachedResponse && Date.now() - cachedAt < ttl) {
-      return NextResponse.json(cachedResponse);
+      return jsonWithCacheHeaders(cachedResponse, session);
     }
 
     const spotSymbols = [
@@ -393,11 +376,11 @@ export async function GET() {
       updatedAt: new Date().toISOString(),
     };
 
-    // Cache the response
     cachedResponse = responseData;
     cachedAt = Date.now();
+    cachedForIstDate = session.istDateKey;
 
-    return NextResponse.json(responseData);
+    return jsonWithCacheHeaders(responseData, session);
   } catch (error) {
     console.error('Market overview error:', error);
     return NextResponse.json({ error: 'Failed to fetch market data' }, { status: 500 });

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,7 +21,6 @@ function pctChange(a: number, b: number): number {
 }
 
 export default function MutualFundsPage() {
-  const router = useRouter();
   const [q, setQ] = useState('');
   const [results, setResults] = useState<MutualFundSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -34,7 +32,9 @@ export default function MutualFundsPage() {
   useEffect(() => {
     async function loadTrending() {
       try {
-        const res = await fetch('/api/mutual-funds/trending');
+        const res = await fetch('/api/mutual-funds/trending', {
+          signal: AbortSignal.timeout(25_000),
+        });
         if (!res.ok) return;
         const data = await res.json();
         setTrending(data.results || []);
