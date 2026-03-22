@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { JsonLdSite } from '@/components/seo/json-ld';
+import { siteUrl, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site-config';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -15,29 +17,55 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
+const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://stockpulse.app'),
+  metadataBase: new URL(siteUrl()),
   title: {
-    default: 'StockPulse - AI-Powered Stock Analysis Platform',
+    default: `${SITE_NAME} — AI stock analysis & portfolio tracker for India`,
     template: '%s | StockPulse',
   },
-  description:
-    'StockPulse helps Indian investors with AI-powered stock analysis, portfolio health scoring, and real-time market insights.',
+  description: SITE_TAGLINE,
+  applicationName: SITE_NAME,
+  category: 'finance',
   keywords: [
     'Indian stocks',
-    'stock analysis',
     'NSE',
     'BSE',
+    'Nifty 50',
+    'Sensex',
+    'stock analysis',
     'portfolio tracker',
-    'stock recommendation engine',
+    'mutual funds India',
+    'AI stock recommendations',
+    'technical analysis',
+    'broker integration India',
+    'Upstox',
+    'Zerodha',
   ],
+  authors: [{ name: SITE_NAME, url: siteUrl() }],
+  creator: SITE_NAME,
   openGraph: {
     type: 'website',
+    locale: 'en_IN',
     url: '/',
-    title: 'StockPulse - AI-Powered Stock Analysis for Indian Markets',
-    description:
-      'Analyze your Indian stock portfolio with AI, technical indicators, and real-time market data.',
-    siteName: 'StockPulse',
+    title: `${SITE_NAME} — AI-powered analysis for NSE & BSE`,
+    description: SITE_TAGLINE,
+    siteName: SITE_NAME,
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'StockPulse — Indian stock analysis',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${SITE_NAME} — Indian markets & portfolio AI`,
+    description: SITE_TAGLINE,
+    images: ['/opengraph-image'],
   },
   robots: {
     index: true,
@@ -50,10 +78,7 @@ export const metadata: Metadata = {
       'max-video-preview': -1,
     },
   },
-  verification: {
-    // Replace this with your actual Google Search Console verification code
-    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || '',
-  },
+  ...(googleVerification ? { verification: { google: googleVerification } } : {}),
 };
 
 export default function RootLayout({
@@ -62,10 +87,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en-IN">
       <body
         className={`${plusJakarta.variable} ${jetbrainsMono.variable} antialiased`}
       >
+        <JsonLdSite />
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

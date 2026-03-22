@@ -1,14 +1,19 @@
 import type { MetadataRoute } from 'next';
+import { siteUrl } from '@/lib/seo/site-config';
 
+/**
+ * Crawl hints: keep API and auth callback noise out of the index; expose sitemap for discovery.
+ */
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://stockpulse.app';
+  const base = siteUrl();
 
   return {
     rules: {
       userAgent: '*',
       allow: '/',
+      disallow: ['/api/', '/dashboard'],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${base}/sitemap.xml`,
+    host: base,
   };
 }
-

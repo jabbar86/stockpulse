@@ -1,5 +1,15 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { siteUrl, SITE_TAGLINE } from '@/lib/seo/site-config';
+
+export const metadata: Metadata = {
+  title: 'AI stock analysis & portfolio tracker for India',
+  description: SITE_TAGLINE,
+  alternates: {
+    canonical: `${siteUrl()}/`,
+  },
+};
 import {
   LineChart,
   BarChart3,

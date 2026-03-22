@@ -1,17 +1,28 @@
 import type { MetadataRoute } from 'next';
+import { siteUrl } from '@/lib/seo/site-config';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://stockpulse.app';
+  const base = siteUrl();
+  const now = new Date();
 
-  const routes = ['', '/dashboard', '/market', '/portfolio', '/stocks', '/news', '/support'].map(
-    (path) => ({
-      url: `${baseUrl}${path}`,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as const,
-      priority: path === '' || path === '/dashboard' ? 1 : 0.7,
-    })
-  );
-
-  return routes;
+  return [
+    {
+      url: base,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 1,
+    },
+    {
+      url: `${base}/login`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${base}/register`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.65,
+    },
+  ];
 }
-
