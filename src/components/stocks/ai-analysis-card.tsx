@@ -11,6 +11,7 @@ import {
   TrendingDownIcon,
   ShieldAlertIcon,
   TargetIcon,
+  Loader2Icon,
 } from 'lucide-react';
 
 interface AIAnalysisCardProps {
@@ -22,33 +23,31 @@ interface AIAnalysisCardProps {
 function getRecommendationConfig(recommendation: AIAnalysis['recommendation']) {
   switch (recommendation) {
     case 'strong_buy':
-      return { label: 'Strong Buy', className: 'bg-green-600 text-white' };
+      return { label: 'Strong Buy', className: 'bg-primary text-primary-foreground' };
     case 'buy':
-      return { label: 'Buy', className: 'bg-green-500/10 text-green-600 dark:text-green-400' };
+      return { label: 'Buy', className: 'bg-primary/12 text-primary' };
     case 'hold':
-      return { label: 'Hold', className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' };
+      return { label: 'Hold', className: 'bg-hold/15 text-hold' };
     case 'sell':
-      return { label: 'Sell', className: 'bg-red-500/10 text-red-600 dark:text-red-400' };
+      return { label: 'Sell', className: 'bg-loss/12 text-loss' };
     case 'strong_sell':
-      return { label: 'Strong Sell', className: 'bg-red-600 text-white' };
+      return { label: 'Strong Sell', className: 'bg-destructive text-destructive-foreground' };
   }
 }
 
 export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnalysisCardProps) {
   if (!analysis && !loading) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
-          <SparklesIcon className="size-10 text-muted-foreground" />
-          <div className="text-center">
-            <p className="font-medium">AI-Powered Analysis</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Get an AI-generated analysis including recommendation, key factors, and price targets.
-            </p>
+      <Card className="border-dashed border-border shadow-none">
+        <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
+          <SparklesIcon className="size-8 text-muted-foreground" />
+          <div className="max-w-md space-y-1">
+            <p className="font-medium">Run AI analysis</p>
+            <p className="text-sm text-muted-foreground">Recommendation, factors, risks, and levels.</p>
           </div>
-          <Button onClick={onAnalyze} className="gap-2">
+          <Button variant="outline" onClick={onAnalyze} className="gap-2">
             <SparklesIcon className="size-4" />
-            Analyze with AI
+            Analyze
           </Button>
         </CardContent>
       </Card>
@@ -57,23 +56,21 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <SparklesIcon className="size-5 animate-pulse text-primary" />
-            Analyzing...
+      <Card className="border-border shadow-none">
+        <CardHeader className="border-b border-border pb-3">
+          <CardTitle className="flex items-center gap-2 text-base font-medium">
+            <Loader2Icon className="size-4 animate-spin text-muted-foreground" />
+            Working…
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <div className="grid grid-cols-2 gap-3">
-            <Skeleton className="h-20" />
-            <Skeleton className="h-20" />
+        <CardContent className="space-y-3 pt-5">
+          <Skeleton className="h-8 w-36" />
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-[90%]" />
+          <div className="grid grid-cols-2 gap-2">
+            <Skeleton className="h-20 rounded-md" />
+            <Skeleton className="h-20 rounded-md" />
           </div>
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-2/3" />
         </CardContent>
       </Card>
     );
@@ -84,14 +81,14 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
   const recConfig = getRecommendationConfig(analysis.recommendation);
 
   return (
-    <Card>
+    <Card className="border-border shadow-none">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <SparklesIcon className="size-5 text-primary" />
-            AI Analysis
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <CardTitle className="flex items-center gap-2 text-base font-medium">
+            <SparklesIcon className="size-4 text-muted-foreground" />
+            Result
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge className={recConfig.className}>{recConfig.label}</Badge>
             <Badge variant="outline">{analysis.confidence}% confidence</Badge>
           </div>
@@ -107,13 +104,13 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <h4 className="flex items-center gap-1.5 text-sm font-medium">
-              <TrendingUpIcon className="size-4 text-green-500" />
+              <TrendingUpIcon className="size-4 text-gain" />
               Key Factors
             </h4>
             <ul className="space-y-1">
               {(analysis.key_factors || []).map((factor, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-green-500" />
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-gain" />
                   {factor}
                 </li>
               ))}
@@ -122,13 +119,13 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
 
           <div className="space-y-2">
             <h4 className="flex items-center gap-1.5 text-sm font-medium">
-              <ShieldAlertIcon className="size-4 text-red-500" />
+              <ShieldAlertIcon className="size-4 text-loss" />
               Risks
             </h4>
             <ul className="space-y-1">
               {(analysis.risks || []).map((risk, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-red-500" />
+                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-loss" />
                   {risk}
                 </li>
               ))}
@@ -146,7 +143,7 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-xs text-muted-foreground">Support</p>
-                <p className="text-lg font-semibold text-red-500">
+                <p className="text-lg font-semibold text-loss">
                   {analysis.price_targets.support.toFixed(2)}
                 </p>
               </div>
@@ -160,7 +157,7 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
               )}
               <div className="rounded-lg border p-3 text-center">
                 <p className="text-xs text-muted-foreground">Resistance</p>
-                <p className="text-lg font-semibold text-green-500">
+                <p className="text-lg font-semibold text-gain">
                   {analysis.price_targets.resistance.toFixed(2)}
                 </p>
               </div>

@@ -11,7 +11,6 @@ import type {
 } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import IndicatorCard from '@/components/stocks/indicator-card';
 import AIAnalysisCard from '@/components/stocks/ai-analysis-card';
@@ -22,17 +21,17 @@ import {
   BarChart3Icon,
   WifiIcon,
   StarIcon,
+  Loader2Icon,
 } from 'lucide-react';
 import { DashboardLink } from '@/components/dashboard/dashboard-link';
 import { useLivePrices } from '@/hooks/use-live-prices';
+import { StockChartSkeleton } from '@/components/stocks/stock-chart-skeleton';
+import { StockAnalysisPageSkeleton } from '@/components/stocks/stock-page-skeleton';
+import { cn } from '@/lib/utils';
 
 const CandlestickChart = dynamic(() => import('@/components/stocks/candlestick-chart'), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-[400px] items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-    </div>
-  ),
+  loading: () => <StockChartSkeleton />,
 });
 
 type Period = '1m' | '5m' | '1H' | '5D' | '1M' | '3M' | '6M' | '1Y';
@@ -51,16 +50,16 @@ const PERIOD_MAP: Record<Period, string> = {
 function getSignalConfig(signal: string) {
   switch (signal) {
     case 'strong_buy':
-      return { label: 'Strong Buy', className: 'bg-green-600 text-white' };
+      return { label: 'Strong Buy', className: 'bg-primary text-primary-foreground' };
     case 'buy':
-      return { label: 'Buy', className: 'bg-green-500/10 text-green-600 dark:text-green-400' };
+      return { label: 'Buy', className: 'bg-primary/12 text-primary' };
     case 'neutral':
     case 'hold':
-      return { label: 'Neutral', className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400' };
+      return { label: 'Neutral', className: 'bg-hold/15 text-hold' };
     case 'sell':
-      return { label: 'Sell', className: 'bg-red-500/10 text-red-600 dark:text-red-400' };
+      return { label: 'Sell', className: 'bg-loss/12 text-loss' };
     case 'strong_sell':
-      return { label: 'Strong Sell', className: 'bg-red-600 text-white' };
+      return { label: 'Strong Sell', className: 'bg-destructive text-destructive-foreground' };
     default:
       return { label: signal, className: 'bg-muted text-muted-foreground' };
   }
@@ -220,6 +219,23 @@ export default function StockAnalysisPage() {
     fetchFav();
   }, [symbol]);
 
+  const suggestedActionLabel = useMemo(() => {
+    const rec = analysis?.recommendation || aiAnalysis?.recommendation;
+    if (!rec) return 'No clear signal';
+    switch (rec) {
+      case 'strong_buy':
+        return 'Strong Buy';
+      case 'buy':
+        return 'Buy';
+      case 'sell':
+        return 'Sell';
+      case 'strong_sell':
+        return 'Strong Sell';
+      default:
+        return 'Hold';
+    }
+  }, [analysis, aiAnalysis]);
+
   const handleToggleFavorite = async () => {
     if (!symbol || !analysis) return;
     setFavLoading(true);
@@ -251,21 +267,7 @@ export default function StockAnalysisPage() {
   };
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="flex gap-4">
-          <Skeleton className="h-12 w-32" />
-          <Skeleton className="h-12 w-24" />
-        </div>
-        <Skeleton className="h-[400px] w-full" />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-28" />
-          ))}
-        </div>
-      </div>
-    );
+    return <StockAnalysisPageSkeleton />;
   }
 
   const currentPrice = live?.price ?? analysis?.current_price ?? 0;
@@ -273,213 +275,236 @@ export default function StockAnalysisPage() {
   const priceChangePercent = live?.changePercent ?? stockQuote?.changePercent ?? 0;
   const isPositive = priceChange >= 0;
 
-  const suggestedActionLabel = useMemo(() => {
-    const rec = analysis?.recommendation || aiAnalysis?.recommendation;
-    if (!rec) return 'No clear signal';
-    switch (rec) {
-      case 'strong_buy':
-        return 'Strong Buy';
-      case 'buy':
-        return 'Buy';
-      case 'sell':
-        return 'Sell';
-      case 'strong_sell':
-        return 'Strong Sell';
-      default:
-        return 'Hold';
-    }
-  }, [analysis, aiAnalysis]);
+  const analysisMissing = !analysis && !loading;
 
   return (
-    <div className="space-y-6">
-      {/* Back Button */}
+    <div className="space-y-10">
       <DashboardLink
         href="/stocks"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeftIcon className="size-4" />
-        Back to Stocks
+        Back to stocks
       </DashboardLink>
 
-      {/* Price Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">{analysis?.name || symbol}</h1>
-          <Badge variant="outline">{symbol}</Badge>
-          <button
-            type="button"
-            onClick={handleToggleFavorite}
-            disabled={favLoading}
-            className={`inline-flex items-center justify-center rounded-full border px-2 py-1 text-xs gap-1 transition-colors ${
-              isFavorite
-                ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-600 dark:text-yellow-400'
-                : 'bg-transparent border-muted text-muted-foreground hover:bg-muted/40'
-            }`}
-          >
-            <StarIcon
-              className={`size-3.5 ${
-                isFavorite ? 'fill-yellow-400 stroke-yellow-500' : ''
-              }`}
-            />
-            <span className="hidden sm:inline">
-              {isFavorite ? 'In Watchlist' : 'Add to Watchlist'}
-            </span>
-          </button>
-          {analysis?.technical?.overallSignal && (
-            <Badge className={getSignalConfig(analysis.technical.overallSignal).className}>
-              {getSignalConfig(analysis.technical.overallSignal).label}
-            </Badge>
-          )}
-        </div>
-        {currentPrice > 0 && (
-          <>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-bold tabular-nums">{formatCurrency(currentPrice)}</span>
-              {isMarketOpen && live ? (
-                <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                  <WifiIcon className="size-3" />
-                  <span className="animate-pulse">Live</span>
-                </span>
-              ) : !isMarketOpen ? (
-                <span className="text-xs text-muted-foreground">Market Closed</span>
-              ) : null}
-              <div
-                className={`flex items-center gap-1 text-lg font-medium ${
-                  isPositive
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
-                }`}
-              >
-                {isPositive ? (
-                  <TrendingUpIcon className="size-5" />
-                ) : (
-                  <TrendingDownIcon className="size-5" />
+      {analysisMissing && (
+        <p className="border-l-2 border-primary pl-3 text-sm text-muted-foreground" role="status">
+          Quote or analysis unavailable for{' '}
+          <span className="font-mono text-foreground">{symbol}</span>. Try another timeframe or{' '}
+          <DashboardLink href="/stocks" className="text-foreground underline underline-offset-2">
+            choose another symbol
+          </DashboardLink>
+          .
+        </p>
+      )}
+
+      <div className="space-y-4 border-b border-border pb-8">
+        <div className="min-w-0 space-y-4">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+                {analysis?.name || symbol}
+              </h1>
+              <Badge variant="outline" className="shrink-0 font-mono text-[11px] font-normal">
+                {symbol}
+              </Badge>
+              <button
+                type="button"
+                onClick={handleToggleFavorite}
+                disabled={favLoading || !analysis}
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors',
+                  !analysis && 'cursor-not-allowed opacity-50',
+                  isFavorite
+                    ? 'border-foreground/20 bg-muted text-foreground'
+                    : 'border-border text-muted-foreground hover:bg-muted/50'
                 )}
-                <span>
-                  {isPositive ? '+' : ''}{priceChange.toFixed(2)} ({isPositive ? '+' : ''}{priceChangePercent.toFixed(2)}%)
-                </span>
-              </div>
+              >
+                {favLoading ? (
+                  <Loader2Icon className="size-3.5 animate-spin" />
+                ) : (
+                  <StarIcon
+                    className={cn(
+                      'size-3.5',
+                      isFavorite ? 'fill-primary/25 stroke-primary' : ''
+                    )}
+                  />
+                )}
+                <span className="hidden sm:inline">{isFavorite ? 'Saved' : 'Save'}</span>
+              </button>
+              {analysis?.technical?.overallSignal && (
+                <Badge className={getSignalConfig(analysis.technical.overallSignal).className}>
+                  {getSignalConfig(analysis.technical.overallSignal).label}
+                </Badge>
+              )}
             </div>
-            {stockQuote && (
-              <div className="space-y-3">
-                {/* Day Range Bar */}
+
+            {currentPrice > 0 && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-6">
+                <div className="flex flex-wrap items-baseline gap-3">
+                  <span className="text-3xl font-semibold tabular-nums tracking-tight sm:text-4xl">
+                    {formatCurrency(currentPrice)}
+                  </span>
+                  <div
+                    className={cn(
+                      'flex items-center gap-1.5 text-base font-medium tabular-nums',
+                      isPositive ? 'text-gain' : 'text-loss'
+                    )}
+                  >
+                    {isPositive ? <TrendingUpIcon className="size-4" /> : <TrendingDownIcon className="size-4" />}
+                    <span>
+                      {isPositive ? '+' : ''}
+                      {priceChange.toFixed(2)} ({isPositive ? '+' : ''}
+                      {priceChangePercent.toFixed(2)}%)
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {isMarketOpen && live ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="size-1.5 rounded-full bg-gain" />
+                      Live
+                      <WifiIcon className="size-3 opacity-70" />
+                    </span>
+                  ) : !isMarketOpen ? (
+                    <span>Session closed</span>
+                  ) : null}
+                </div>
+              </div>
+            )}
+
+            {currentPrice <= 0 && !analysisMissing && (
+              <p className="text-sm text-muted-foreground">Waiting for price…</p>
+            )}
+
+            {stockQuote && currentPrice > 0 && (
+              <div className="space-y-3 pt-1">
                 {stockQuote.dayLow > 0 && stockQuote.dayHigh > 0 && (
-                  <div className="max-w-sm">
-                    <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                      <span>Day Low</span>
-                      <span>Day High</span>
+                  <div className="max-w-md">
+                    <div className="mb-1 flex justify-between text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <span>Low</span>
+                      <span>High</span>
                     </div>
-                    <div className="relative h-2 rounded-full bg-gradient-to-r from-red-400 via-yellow-400 to-green-400 dark:from-red-500 dark:via-yellow-500 dark:to-green-500">
+                    <div className="relative h-2 rounded-sm bg-muted">
+                      <div
+                        className="absolute inset-y-0 rounded-sm bg-gradient-to-r from-loss/35 via-hold/25 to-gain/35"
+                        style={{ width: '100%' }}
+                      />
                       {(() => {
                         const range = stockQuote.dayHigh - stockQuote.dayLow;
-                        const position = range > 0
-                          ? ((currentPrice - stockQuote.dayLow) / range) * 100
-                          : 50;
+                        const position =
+                          range > 0 ? ((currentPrice - stockQuote.dayLow) / range) * 100 : 50;
                         return (
                           <div
-                            className="absolute top-1/2 -translate-y-1/2 size-3.5 rounded-full bg-foreground border-2 border-background shadow-md"
-                            style={{ left: `calc(${Math.max(0, Math.min(100, position))}% - 7px)` }}
+                            className="absolute top-1/2 size-3 -translate-y-1/2 rounded-full border-2 border-background bg-foreground"
+                            style={{ left: `calc(${Math.max(0, Math.min(100, position))}% - 6px)` }}
                           />
                         );
                       })()}
                     </div>
-                    <div className="flex justify-between text-xs font-medium mt-1 tabular-nums">
+                    <div className="mt-1 flex justify-between text-xs tabular-nums text-muted-foreground">
                       <span>{formatCurrency(stockQuote.dayLow)}</span>
                       <span>{formatCurrency(stockQuote.dayHigh)}</span>
                     </div>
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  {stockQuote.open > 0 && <span>Open: {formatCurrency(stockQuote.open)}</span>}
-                  {stockQuote.previousClose > 0 && <span>Prev Close: {formatCurrency(stockQuote.previousClose)}</span>}
-                  {stockQuote.volume > 0 && <span>Vol: {(stockQuote.volume / 1e6).toFixed(2)}M</span>}
+                <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
+                  {stockQuote.open > 0 && <span>O {formatCurrency(stockQuote.open)}</span>}
+                  {stockQuote.previousClose > 0 && <span>Prev {formatCurrency(stockQuote.previousClose)}</span>}
+                  {stockQuote.volume > 0 && <span>Vol {(stockQuote.volume / 1e6).toFixed(2)}M</span>}
                 </div>
               </div>
             )}
-          </>
-        )}
+          </div>
       </div>
 
-      {/* Period Selector and Chart */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3Icon className="size-5" />
-              Price Chart
-            </CardTitle>
+      <Card className="border-border shadow-none">
+        <CardHeader className="pb-2">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Chart</p>
+              <CardTitle className="mt-1 flex items-center gap-2 text-base font-medium">
+                <BarChart3Icon className="size-4 text-muted-foreground" />
+                OHLC
+              </CardTitle>
+            </div>
             <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-              <TabsList className="flex-wrap h-auto gap-0.5">
-                <TabsTrigger value="1m" className="text-xs px-2 h-7">1m</TabsTrigger>
-                <TabsTrigger value="5m" className="text-xs px-2 h-7">5m</TabsTrigger>
-                <TabsTrigger value="1H" className="text-xs px-2 h-7">1H</TabsTrigger>
-                <TabsTrigger value="5D" className="text-xs px-2 h-7">5D</TabsTrigger>
-                <TabsTrigger value="1M" className="text-xs px-2 h-7">1M</TabsTrigger>
-                <TabsTrigger value="3M" className="text-xs px-2 h-7">3M</TabsTrigger>
-                <TabsTrigger value="6M" className="text-xs px-2 h-7">6M</TabsTrigger>
-                <TabsTrigger value="1Y" className="text-xs px-2 h-7">1Y</TabsTrigger>
+              <TabsList variant="line" className="h-auto w-full flex-wrap justify-start gap-0 p-0 lg:w-auto">
+                <TabsTrigger value="1m" className="px-2.5 py-1.5 text-xs">
+                  1m
+                </TabsTrigger>
+                <TabsTrigger value="5m" className="px-2.5 py-1.5 text-xs">
+                  5m
+                </TabsTrigger>
+                <TabsTrigger value="1H" className="px-2.5 py-1.5 text-xs">
+                  1H
+                </TabsTrigger>
+                <TabsTrigger value="5D" className="px-2.5 py-1.5 text-xs">
+                  5D
+                </TabsTrigger>
+                <TabsTrigger value="1M" className="px-2.5 py-1.5 text-xs">
+                  1M
+                </TabsTrigger>
+                <TabsTrigger value="3M" className="px-2.5 py-1.5 text-xs">
+                  3M
+                </TabsTrigger>
+                <TabsTrigger value="6M" className="px-2.5 py-1.5 text-xs">
+                  6M
+                </TabsTrigger>
+                <TabsTrigger value="1Y" className="px-2.5 py-1.5 text-xs">
+                  1Y
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           {chartLoading ? (
-            <div className="flex h-[400px] items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
+            <StockChartSkeleton />
           ) : historicalData.length > 0 ? (
-            <CandlestickChart data={historicalData} livePrice={live?.price} liveVolume={live?.volume} />
+            <div className="overflow-hidden rounded-lg border border-border">
+              <CandlestickChart data={historicalData} livePrice={live?.price} liveVolume={live?.volume} />
+            </div>
           ) : (
-            <div className="flex h-[400px] items-center justify-center text-sm text-muted-foreground">
-              No chart data available for this period.
+            <div className="flex h-[400px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 text-center">
+              <BarChart3Icon className="size-8 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">No data for this range.</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Suggested Action */}
       {(analysis || aiAnalysis) && (
-        <Card>
+        <Card className="border-border shadow-none">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm sm:text-base">
-              Suggested Action
-            </CardTitle>
+            <CardTitle className="text-base font-medium">Signal</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              From technicals{aiAnalysis ? ' and AI' : ''}.
+            </p>
           </CardHeader>
-          <CardContent className="space-y-2 sm:space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs text-muted-foreground">
-                  Based on technicals{aiAnalysis ? ' + AI view' : ''}.
-                </p>
-                <p className="text-base sm:text-lg font-semibold">
-                  {suggestedActionLabel}
-                </p>
-              </div>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <p className="text-lg font-semibold sm:text-xl">{suggestedActionLabel}</p>
               {aiAnalysis?.confidence !== undefined && (
-                <div className="text-right">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Confidence
-                  </p>
-                  <p className="text-sm font-semibold tabular-nums">
-                    {aiAnalysis.confidence}%
-                  </p>
+                <div className="text-right text-sm tabular-nums">
+                  <p className="text-xs text-muted-foreground">Confidence</p>
+                  <p className="font-semibold">{aiAnalysis.confidence}%</p>
                 </div>
               )}
             </div>
             {aiAnalysis?.summary && (
-              <p className="text-xs sm:text-sm text-muted-foreground line-clamp-3">
-                {aiAnalysis.summary}
-              </p>
+              <p className="text-sm text-muted-foreground line-clamp-4">{aiAnalysis.summary}</p>
             )}
           </CardContent>
         </Card>
       )}
 
-      {/* Technical Indicators */}
       {analysis?.technical && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Technical Indicators</h2>
+          <div>
+            <h2 className="text-base font-medium">Indicators</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">RSI, MACD, Bollinger, score.</p>
+          </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* RSI */}
@@ -512,8 +537,7 @@ export default function StockAnalysisPage() {
               description={`Middle: ${analysis.technical.bollingerBands.middle.toFixed(2)}`}
             />
 
-            {/* Overall Score */}
-            <Card size="sm">
+            <Card size="sm" className="border-border shadow-none">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -532,10 +556,10 @@ export default function StockAnalysisPage() {
                   <div
                     className={`h-full rounded-full transition-all ${
                       analysis.technical.score > 0
-                        ? 'bg-green-500'
+                        ? 'bg-gain'
                         : analysis.technical.score < 0
-                        ? 'bg-red-500'
-                        : 'bg-yellow-500'
+                        ? 'bg-loss'
+                        : 'bg-hold'
                     }`}
                     style={{ width: `${Math.abs(analysis.technical.score) / 2 + 50}%` }}
                   />
@@ -547,10 +571,9 @@ export default function StockAnalysisPage() {
             </Card>
           </div>
 
-          {/* SMA/EMA Levels */}
-          <Card>
+          <Card className="border-border shadow-none">
             <CardHeader>
-              <CardTitle>Moving Averages</CardTitle>
+              <CardTitle className="text-base font-medium">Moving averages</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
@@ -590,9 +613,11 @@ export default function StockAnalysisPage() {
         </div>
       )}
 
-      {/* AI Analysis */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">AI Analysis</h2>
+      <div className="space-y-2">
+        <div>
+          <h2 className="text-base font-medium">AI</h2>
+          <p className="text-sm text-muted-foreground">On-demand.</p>
+        </div>
         <AIAnalysisCard
           analysis={aiAnalysis || analysis?.ai || null}
           loading={aiLoading}

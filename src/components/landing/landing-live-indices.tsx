@@ -55,8 +55,16 @@ export function LandingLiveIndices() {
 
   if (!ready) {
     return (
-      <div className="mx-auto mt-8 max-w-2xl rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-center text-xs text-muted-foreground backdrop-blur-sm sm:text-sm">
-        Loading market snapshot…
+      <div className="mx-auto mt-10 max-w-2xl rounded-lg border border-border bg-muted/30 px-4 py-3 sm:text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          {[1, 2, 3].map((k) => (
+            <span key={k} className="inline-flex items-center gap-2">
+              <span className="h-3.5 w-16 animate-pulse rounded-md bg-muted" />
+              <span className="h-3.5 w-14 animate-pulse rounded-md bg-muted/80" />
+              <span className="h-3.5 w-12 animate-pulse rounded-md bg-muted/60" />
+            </span>
+          ))}
+        </div>
       </div>
     );
   }
@@ -65,7 +73,7 @@ export function LandingLiveIndices() {
 
   return (
     <div
-      className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-2 rounded-xl border border-border/60 bg-card/50 px-4 py-3 text-xs sm:text-sm backdrop-blur-sm"
+      className="mx-auto mt-10 flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-2 rounded-lg border border-border bg-muted/20 px-4 py-3 text-xs motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95 motion-safe:duration-500 sm:text-sm"
       aria-live="polite"
     >
       {rows.map((r) => (
@@ -76,7 +84,7 @@ export function LandingLiveIndices() {
             <span
               className={cn(
                 'font-medium',
-                r.changePercent >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                r.changePercent >= 0 ? 'text-gain' : 'text-loss'
               )}
             >
               {pct(r.changePercent)}

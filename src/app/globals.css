@@ -34,6 +34,10 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  /* Market semantics — use text-gain / text-loss / bg-gain/10 etc. */
+  --color-gain: var(--gain);
+  --color-loss: var(--loss);
+  --color-hold: var(--hold);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -47,75 +51,81 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* Light theme — Rich Emerald & Charcoal financial palette */
+/* Light — warm paper, teal accent, muted gain/loss (not neon) */
 :root {
-  --background: oklch(0.97 0.006 155);
-  --foreground: oklch(0.15 0.02 250);
-  --card: oklch(0.995 0.002 155);
-  --card-foreground: oklch(0.15 0.02 250);
-  --popover: oklch(0.995 0.002 155);
-  --popover-foreground: oklch(0.15 0.02 250);
-  --primary: oklch(0.52 0.17 160);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.94 0.015 155);
-  --secondary-foreground: oklch(0.25 0.04 160);
-  --muted: oklch(0.95 0.008 155);
-  --muted-foreground: oklch(0.48 0.02 250);
-  --accent: oklch(0.92 0.025 160);
-  --accent-foreground: oklch(0.28 0.06 160);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.90 0.012 155);
-  --input: oklch(0.90 0.012 155);
-  --ring: oklch(0.52 0.15 160);
-  --chart-1: oklch(0.55 0.17 160);
-  --chart-2: oklch(0.6 0.18 265);
-  --chart-3: oklch(0.65 0.16 45);
-  --chart-4: oklch(0.55 0.22 25);
-  --chart-5: oklch(0.6 0.18 310);
+  --background: oklch(0.985 0.006 95);
+  --foreground: oklch(0.22 0.022 265);
+  --card: oklch(0.998 0.003 95);
+  --card-foreground: oklch(0.22 0.022 265);
+  --popover: oklch(0.998 0.003 95);
+  --popover-foreground: oklch(0.22 0.022 265);
+  --primary: oklch(0.44 0.12 202);
+  --primary-foreground: oklch(0.99 0.005 95);
+  --secondary: oklch(0.955 0.012 95);
+  --secondary-foreground: oklch(0.28 0.03 265);
+  --muted: oklch(0.955 0.01 95);
+  --muted-foreground: oklch(0.46 0.02 265);
+  --accent: oklch(0.94 0.02 200);
+  --accent-foreground: oklch(0.28 0.06 202);
+  --destructive: oklch(0.52 0.2 25);
+  --border: oklch(0.90 0.01 95);
+  --input: oklch(0.90 0.01 95);
+  --ring: oklch(0.44 0.12 202);
+  --gain: oklch(0.46 0.13 158);
+  --loss: oklch(0.48 0.16 25);
+  --hold: oklch(0.48 0.06 85);
+  --chart-1: oklch(0.44 0.12 202);
+  --chart-2: oklch(0.46 0.13 158);
+  --chart-3: oklch(0.48 0.16 25);
+  --chart-4: oklch(0.5 0.08 265);
+  --chart-5: oklch(0.48 0.06 85);
   --radius: 0.625rem;
-  --sidebar: oklch(0.18 0.025 250);
-  --sidebar-foreground: oklch(0.93 0.008 155);
-  --sidebar-primary: oklch(0.6 0.17 160);
+  --sidebar: oklch(0.2 0.022 265);
+  --sidebar-foreground: oklch(0.93 0.01 95);
+  --sidebar-primary: oklch(0.55 0.12 202);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.24 0.03 250);
-  --sidebar-accent-foreground: oklch(0.93 0.008 155);
-  --sidebar-border: oklch(0.26 0.02 250);
-  --sidebar-ring: oklch(0.55 0.15 160);
+  --sidebar-accent: oklch(0.26 0.02 265);
+  --sidebar-accent-foreground: oklch(0.93 0.01 95);
+  --sidebar-border: oklch(0.3 0.02 265);
+  --sidebar-ring: oklch(0.55 0.12 202);
 }
 
-/* Dark theme — Deep slate with emerald accents */
+/* Dark — cool slate surface, softer teal + gain/loss */
 .dark {
-  --background: oklch(0.14 0.015 250);
-  --foreground: oklch(0.94 0.008 155);
-  --card: oklch(0.18 0.018 250);
-  --card-foreground: oklch(0.94 0.008 155);
-  --popover: oklch(0.18 0.018 250);
-  --popover-foreground: oklch(0.94 0.008 155);
-  --primary: oklch(0.62 0.17 160);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.22 0.02 250);
-  --secondary-foreground: oklch(0.92 0.008 155);
-  --muted: oklch(0.22 0.018 250);
-  --muted-foreground: oklch(0.62 0.015 250);
-  --accent: oklch(0.25 0.03 160);
-  --accent-foreground: oklch(0.92 0.008 155);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.28 0.02 250);
-  --input: oklch(0.25 0.018 250);
-  --ring: oklch(0.55 0.15 160);
-  --chart-1: oklch(0.62 0.17 160);
-  --chart-2: oklch(0.65 0.18 265);
-  --chart-3: oklch(0.7 0.15 45);
-  --chart-4: oklch(0.6 0.2 25);
-  --chart-5: oklch(0.65 0.18 310);
-  --sidebar: oklch(0.12 0.018 250);
-  --sidebar-foreground: oklch(0.93 0.008 155);
-  --sidebar-primary: oklch(0.6 0.17 160);
-  --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.2 0.02 250);
-  --sidebar-accent-foreground: oklch(0.93 0.008 155);
-  --sidebar-border: oklch(0.22 0.015 250);
-  --sidebar-ring: oklch(0.55 0.15 160);
+  --background: oklch(0.16 0.02 265);
+  --foreground: oklch(0.93 0.012 95);
+  --card: oklch(0.2 0.022 265);
+  --card-foreground: oklch(0.93 0.012 95);
+  --popover: oklch(0.2 0.022 265);
+  --popover-foreground: oklch(0.93 0.012 95);
+  --primary: oklch(0.72 0.11 200);
+  --primary-foreground: oklch(0.16 0.02 265);
+  --secondary: oklch(0.24 0.02 265);
+  --secondary-foreground: oklch(0.92 0.01 95);
+  --muted: oklch(0.24 0.018 265);
+  --muted-foreground: oklch(0.62 0.015 95);
+  --accent: oklch(0.28 0.04 200);
+  --accent-foreground: oklch(0.92 0.01 95);
+  --destructive: oklch(0.65 0.17 25);
+  --border: oklch(0.30 0.02 265);
+  --input: oklch(0.26 0.02 265);
+  --ring: oklch(0.72 0.11 200);
+  --gain: oklch(0.72 0.12 158);
+  --loss: oklch(0.72 0.14 25);
+  --hold: oklch(0.68 0.08 85);
+  --chart-1: oklch(0.72 0.11 200);
+  --chart-2: oklch(0.72 0.12 158);
+  --chart-3: oklch(0.72 0.14 25);
+  --chart-4: oklch(0.65 0.06 265);
+  --chart-5: oklch(0.68 0.08 85);
+  --sidebar: oklch(0.14 0.02 265);
+  --sidebar-foreground: oklch(0.92 0.01 95);
+  --sidebar-primary: oklch(0.72 0.11 200);
+  --sidebar-primary-foreground: oklch(0.16 0.02 265);
+  --sidebar-accent: oklch(0.22 0.02 265);
+  --sidebar-accent-foreground: oklch(0.92 0.01 95);
+  --sidebar-border: oklch(0.26 0.02 265);
+  --sidebar-ring: oklch(0.72 0.11 200);
 }
 
 @layer base {
@@ -186,13 +196,13 @@
   animation: gauge-enter 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Live price flash animations */
+/* Live price flash — tied to theme gain/loss */
 @keyframes flash-green {
-  0% { background-color: rgba(34, 197, 94, 0.2); }
+  0% { background-color: color-mix(in oklch, var(--gain) 22%, transparent); }
   100% { background-color: transparent; }
 }
 @keyframes flash-red {
-  0% { background-color: rgba(239, 68, 68, 0.2); }
+  0% { background-color: color-mix(in oklch, var(--loss) 22%, transparent); }
   100% { background-color: transparent; }
 }
 .animate-flash-green {
@@ -200,4 +210,166 @@
 }
 .animate-flash-red {
   animation: flash-red 0.8s ease-out;
+}
+
+/* Landing — ambient motion (disabled when prefers-reduced-motion) */
+@keyframes landing-blob-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(4%, -3%) scale(1.06);
+  }
+}
+
+@keyframes landing-cta-gradient {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.landing-blob {
+  animation: landing-blob-float 20s ease-in-out infinite;
+}
+
+.landing-blob-reverse {
+  animation: landing-blob-float 26s ease-in-out infinite reverse;
+}
+
+.landing-cta-animated {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklch, var(--primary) 12%, transparent) 0%,
+    color-mix(in oklch, var(--primary) 6%, transparent) 50%,
+    color-mix(in oklch, var(--primary) 10%, transparent) 100%
+  );
+  background-size: 200% 200%;
+  animation: landing-cta-gradient 16s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-blob,
+  .landing-blob-reverse {
+    animation: none;
+  }
+
+  .landing-cta-animated {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
+
+/* —— Smooth UI motion (ease-out, no overshoot / bounce) —— */
+@keyframes smooth-route-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes smooth-route-in-auth {
+  0% {
+    opacity: 0;
+    transform: translate3d(14px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes soft-cta-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 16px -8px color-mix(in oklch, var(--primary) 32%, transparent),
+      0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow:
+      0 8px 28px -6px color-mix(in oklch, var(--primary) 42%, transparent),
+      0 0 20px -4px color-mix(in oklch, var(--primary) 14%, transparent);
+  }
+}
+
+@keyframes soft-logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.gaming-stat-hover {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gaming-stat-hover:hover {
+  transform: scale(1.04) translateY(-2px);
+}
+
+.gaming-feature-card {
+  transition:
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.45s ease,
+    border-color 0.3s ease,
+    background-color 0.3s ease;
+}
+
+.gaming-feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -16px color-mix(in oklch, var(--primary) 22%, transparent);
+}
+
+.gaming-route-enter {
+  animation: smooth-route-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gaming-route-enter-auth {
+  animation: smooth-route-in-auth 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.gaming-cta-glow {
+  animation: soft-cta-glow 4s ease-in-out infinite;
+}
+
+.gaming-logo-bob {
+  animation: soft-logo-float 4.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gaming-route-enter,
+  .gaming-route-enter-auth {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .gaming-cta-glow {
+    animation: none;
+  }
+
+  .gaming-logo-bob {
+    animation: none;
+  }
+
+  .gaming-stat-hover:hover {
+    transform: none;
+  }
+
+  .gaming-feature-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
 }
