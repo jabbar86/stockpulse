@@ -1,5 +1,6 @@
 import { LineChart, TrendingUp, Shield, BarChart3, Sparkles, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
+import { MarketRiskDisclaimer } from '@/components/legal/market-risk-disclaimer';
 
 export default function AuthLayout({
   children,
@@ -94,6 +95,8 @@ export default function AuthLayout({
         </Link>
 
         <div className="w-full max-w-[400px]">{children}</div>
+
+        <MarketRiskDisclaimer className="mt-6 max-w-[400px]" />
 
         <p className="text-[10px] text-muted-foreground/40 mt-8 lg:hidden">
           &copy; {new Date().getFullYear()} StockPulse

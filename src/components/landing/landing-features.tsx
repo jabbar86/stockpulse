@@ -155,8 +155,8 @@ function IllustrationPortfolio() {
   return (
     <div className="grid grid-cols-2 gap-2.5">
       {stats.map((s) => (
-        <div key={s.label} className="stat-card-accent overflow-hidden rounded-lg border border-border bg-card">
-          <div className="h-0.5 w-full bg-gradient-to-r from-primary to-primary/50" />
+        <div key={s.label} className="overflow-hidden rounded-lg border border-border bg-card">
+          <div className="h-0.5 w-full shrink-0 bg-gradient-to-r from-primary to-primary/50" />
           <div className="px-3 py-2.5">
             <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{s.label}</p>
             <p className={cn('mt-1 text-sm font-bold tabular-nums', s.color)}>{s.value}</p>

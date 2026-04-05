@@ -111,31 +111,6 @@
   box-shadow: 0 8px 24px -8px oklch(0.50 0.03 255 / 0.12), 0 2px 6px -2px oklch(0.50 0.03 255 / 0.06);
 }
 
-/* Animated gradient accent line on stat cards */
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-.stat-card-accent {
-  position: relative;
-  overflow: hidden;
-}
-.stat-card-accent::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--primary), var(--gain), var(--primary));
-  background-size: 200% 100%;
-  animation: gradient-shift 4s ease infinite;
-  opacity: 0.8;
-  border-radius: var(--radius) var(--radius) 0 0;
-}
-
 /* Live pulse dot */
 @keyframes live-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }

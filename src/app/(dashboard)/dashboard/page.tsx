@@ -340,8 +340,8 @@ export default function DashboardPage() {
           ];
 
           return (
-            <Card key={card.title} className="stat-card-accent overflow-hidden">
-              <div className={cn('h-1 w-full bg-gradient-to-r', accentGradients[idx % accentGradients.length])} />
+            <Card key={card.title} className="overflow-hidden">
+              <div className={cn('h-1 w-full shrink-0 bg-gradient-to-r', accentGradients[idx % accentGradients.length])} />
               <CardContent className="p-4 sm:p-6">
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground sm:text-xs">

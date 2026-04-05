@@ -214,8 +214,8 @@ export default function PortfolioPage() {
       {/* Portfolio Summary — 4 stat cards with accent gradient */}
       {!loading && liveHoldings.length > 0 && (
         <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-          <Card className="stat-card-accent overflow-hidden">
-            <div className="h-1 w-full bg-gradient-to-r from-primary to-primary/60" />
+          <Card className="overflow-hidden">
+            <div className="h-1 w-full shrink-0 bg-gradient-to-r from-primary to-primary/60" />
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Value</span>
@@ -229,8 +229,8 @@ export default function PortfolioPage() {
             </CardContent>
           </Card>
 
-          <Card className="stat-card-accent overflow-hidden">
-            <div className={`h-1 w-full bg-gradient-to-r ${isProfit ? 'from-gain to-gain/60' : 'from-loss to-loss/60'}`} />
+          <Card className="overflow-hidden">
+            <div className={`h-1 w-full shrink-0 bg-gradient-to-r ${isProfit ? 'from-gain to-gain/60' : 'from-loss to-loss/60'}`} />
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total P&L</span>
@@ -247,8 +247,8 @@ export default function PortfolioPage() {
             </CardContent>
           </Card>
 
-          <Card className="stat-card-accent overflow-hidden">
-            <div className={`h-1 w-full bg-gradient-to-r ${totalDayChange >= 0 ? 'from-gain to-chart-2' : 'from-loss to-chart-3'}`} />
+          <Card className="overflow-hidden">
+            <div className={`h-1 w-full shrink-0 bg-gradient-to-r ${totalDayChange >= 0 ? 'from-gain to-chart-2' : 'from-loss to-chart-3'}`} />
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Day Change</span>
@@ -262,8 +262,8 @@ export default function PortfolioPage() {
             </CardContent>
           </Card>
 
-          <Card className="stat-card-accent overflow-hidden">
-            <div className="h-1 w-full bg-gradient-to-r from-chart-4 via-primary to-chart-1" />
+          <Card className="overflow-hidden">
+            <div className="h-1 w-full shrink-0 bg-gradient-to-r from-chart-4 via-primary to-chart-1" />
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Best Performer</span>

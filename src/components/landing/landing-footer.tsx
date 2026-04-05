@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { LineChart } from 'lucide-react';
+import { MarketRiskDisclaimer } from '@/components/legal/market-risk-disclaimer';
 
 const PRODUCT_LINKS = [
   { href: '#features', label: 'Features' },
@@ -11,8 +12,8 @@ const PRODUCT_LINKS = [
 const RESOURCE_LINKS = [
   { href: '/support', label: 'Support' },
   { href: '/support', label: 'Documentation' },
-  { href: '#', label: 'Privacy Policy' },
-  { href: '#', label: 'Terms of Service' },
+  { href: '/privacy', label: 'Privacy Policy' },
+  { href: '/terms', label: 'Terms of Service' },
 ] as const;
 
 const CONNECT_LINKS = [
@@ -96,8 +97,11 @@ export function LandingFooter() {
           </div>
         </div>
 
-        <div className="mt-10 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} StockPulse. All rights reserved.
+        <div className="mt-10 space-y-4 border-t border-border pt-6">
+          <MarketRiskDisclaimer size="sm" className="max-w-3xl mx-auto px-2" />
+          <p className="text-center text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} StockPulse. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>
