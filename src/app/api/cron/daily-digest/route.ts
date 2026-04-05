@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { siteUrl } from '@/lib/seo/site-config';
 import { istYmd, formatIstLong } from '@/lib/today/ist';
 import { loadPortfolioForUserId } from '@/lib/portfolio/load-for-user';
 import { isResendConfigured, resendConfigReason, sendTransactionalEmail } from '@/lib/email/resend-transactional';
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const appUrl = siteUrl();
 
   try {
     const service = createServiceRoleClient();

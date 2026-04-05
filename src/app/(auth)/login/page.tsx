@@ -23,6 +23,21 @@ function LoginForm() {
 
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const justVerified = searchParams.get('verified') === 'true';
+  const authErrorCode = searchParams.get('authError');
+  const authErrorBanner =
+    authErrorCode === 'missing_code' || authErrorCode === 'verification_failed'
+      ? authErrorCode === 'missing_code'
+        ? 'That confirmation link is missing or expired. On the sign-in page, use “Resend verification email” if your account is not confirmed yet.'
+        : 'We could not confirm your email from that link. Open the link in the same browser you used to sign up, or request a new verification email below.'
+      : authErrorCode
+        ? (() => {
+            try {
+              return decodeURIComponent(authErrorCode);
+            } catch {
+              return authErrorCode;
+            }
+          })()
+        : null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,6 +100,12 @@ function LoginForm() {
           <div className="bg-gain/10 text-gain text-sm p-3.5 rounded-xl text-center font-medium flex items-center justify-center gap-2">
             <CheckCircle2Icon className="size-4" />
             Email verified! You can now sign in.
+          </div>
+        )}
+
+        {authErrorBanner && (
+          <div className="rounded-xl border border-destructive/25 bg-destructive/10 p-3.5 text-center text-sm font-medium text-destructive">
+            {authErrorBanner}
           </div>
         )}
 

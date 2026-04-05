@@ -1,6 +1,9 @@
-/** Canonical site origin for sitemap, robots, metadataBase, and JSON-LD. */
+/** Production deploy (used when `NEXT_PUBLIC_APP_URL` is unset). */
+export const CANONICAL_SITE_ORIGIN = 'https://stock-pulse.in';
+
+/** Canonical site origin for sitemap, robots, metadataBase, JSON-LD, and email links. */
 export function siteUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://stock-pulse.in';
+  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim() || CANONICAL_SITE_ORIGIN;
   return raw.replace(/\/$/, '');
 }
 
