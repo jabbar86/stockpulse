@@ -1,4 +1,5 @@
 -- Speed up GET /api/profile parallel counts (run in Supabase SQL editor or via CLI)
+-- Idempotent: same index names as schema.sql — IF NOT EXISTS is a no-op when already applied.
 
 -- analysis_history: count non-cached AI rows per user
 create index if not exists idx_analysis_history_user_ai_noncached

@@ -1,6 +1,6 @@
 -- Fix signup: "Database error saving new user"
 -- Cause: handle_new_user() insert into public.profiles was blocked by RLS or unsafe search_path.
--- Run this in Supabase → SQL Editor (postgres role).
+-- Idempotent: CREATE OR REPLACE function; ALTER/REVOKE/GRANT safe to repeat.
 
 create or replace function public.handle_new_user()
 returns trigger
