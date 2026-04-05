@@ -1,5 +1,6 @@
 -- Fix signup: "Database error saving new user" — baseline trigger hardening.
 -- Idempotent. Full canonical behaviour (search_path '', orphans, upsert) is in 007.
+-- NEVER add REVOKE EXECUTE FROM PUBLIC here — it breaks hosted Supabase signup (see 006, 008).
 
 create or replace function public.handle_new_user()
 returns trigger

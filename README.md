@@ -15,6 +15,7 @@ To skip migrations for a single build: `SKIP_DB_MIGRATE=1 npm run build`.
 
 ### Signup: “Database error saving new user”
 
-1. Run all migrations through **`007_canonical_signup_profile.sql`** (Vercel `DATABASE_URL` + deploy, or `npm run db:migrate`). **`006`** restores `GRANT EXECUTE … TO PUBLIC` if an old `004` revoked it.
-2. Set **`SUPABASE_SERVICE_ROLE_KEY`** on the server (see `.env.example`). The app calls **`POST /api/profile/ensure`** once per session if a user has Auth but no `profiles` row (backfill after a missed trigger).
-3. In Supabase SQL Editor you can still paste migration files manually. Orphan cleanup is built into **`007`** (email rows without a matching `auth.users` id).
+1. Deploy with **`DATABASE_URL`** so migrations run through **`008`** ( **`006`–`008`** all (re)apply `GRANT EXECUTE … TO PUBLIC` if an early **`004`** revoked it from `handle_new_user`).
+2. **Emergency (no deploy):** open Supabase → SQL Editor and run the full script **`supabase/manual-repair-signup.sql`** once.
+3. Set **`SUPABASE_SERVICE_ROLE_KEY`** on the server (see `.env.example`). The app uses **`POST /api/profile/ensure`** if Auth exists but `profiles` is missing.
+4. Orphan email cleanup is in **`007`** / the manual repair script.
