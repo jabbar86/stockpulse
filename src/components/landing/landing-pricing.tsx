@@ -27,7 +27,7 @@ const PLANS = [
   },
   {
     name: 'Pro',
-    price: '499',
+    price: '99',
     period: 'per month',
     description: 'For serious investors who want the edge.',
     features: [
@@ -38,7 +38,7 @@ const PLANS = [
       'Risk dashboard & correlation matrix',
       'Priority support',
     ],
-    cta: 'Start free trial',
+    cta: 'Create account',
     variant: 'default' as const,
     popular: true,
   },
@@ -102,7 +102,10 @@ export function LandingPricing() {
                   ))}
                 </ul>
 
-                <Link href="/register" className="mt-8">
+                <Link
+                  href={plan.popular ? '/register?plan=pro' : '/register'}
+                  className="mt-8"
+                >
                   <Button
                     variant={plan.variant}
                     className={cn(
@@ -116,7 +119,7 @@ export function LandingPricing() {
 
                 {plan.popular && (
                   <p className="mt-3 text-center text-xs text-muted-foreground">
-                    7-day free trial included
+                    Free to join. Upgrade to Pro from your account when you&apos;re ready.
                   </p>
                 )}
               </div>
