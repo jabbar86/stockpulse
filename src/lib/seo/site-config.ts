@@ -1,6 +1,6 @@
 /** Canonical site origin for sitemap, robots, metadataBase, and JSON-LD. */
 export function siteUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://stockpulse.app';
+  const raw = process.env.NEXT_PUBLIC_APP_URL?.trim() || 'https://stock-pulse.in';
   return raw.replace(/\/$/, '');
 }
 

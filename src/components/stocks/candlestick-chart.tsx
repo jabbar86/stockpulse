@@ -385,14 +385,14 @@ export default function CandlestickChart({ data, livePrice, liveVolume }: StockC
               {new Date(display.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })}
             </span>
             <span>O <span className="font-medium">{formatPrice(display.open)}</span></span>
-            <span>H <span className="font-medium text-green-600 dark:text-green-400">{formatPrice(display.high)}</span></span>
-            <span>L <span className="font-medium text-red-600 dark:text-red-400">{formatPrice(display.low)}</span></span>
+            <span>H <span className="font-medium text-green-600">{formatPrice(display.high)}</span></span>
+            <span>L <span className="font-medium text-red-600">{formatPrice(display.low)}</span></span>
             <span>C <span className="font-medium">{formatPrice(display.close)}</span></span>
-            <span className={`font-semibold ${isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <span className={`font-semibold ${isUp ? 'text-green-600' : 'text-red-600'}`}>
               {isUp ? '+' : ''}{display.change.toFixed(2)} ({isUp ? '+' : ''}{display.changePercent.toFixed(2)}%)
             </span>
             <span className="text-muted-foreground">
-              Vol: <span className={`font-medium ${isUp ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              Vol: <span className={`font-medium ${isUp ? 'text-green-600' : 'text-red-600'}`}>
                 {formatVol(display.volume)}
               </span>
               {isUp ? ' Buy' : ' Sell'}

@@ -43,8 +43,8 @@ function HoldingCard({
 }) {
   const isProfit = holding.pnl >= 0;
   const pnlColor = isProfit
-    ? 'text-green-600 dark:text-green-400'
-    : 'text-red-600 dark:text-red-400';
+    ? 'text-green-600'
+    : 'text-red-600';
 
   return (
     <div className="rounded-lg border p-3 space-y-2">
@@ -169,8 +169,8 @@ export default function HoldingsTable({ holdings, onEdit, onDelete }: HoldingsTa
             {holdings.map((holding) => {
               const isProfit = holding.pnl >= 0;
               const pnlColor = isProfit
-                ? 'text-green-600 dark:text-green-400'
-                : 'text-red-600 dark:text-red-400';
+                ? 'text-green-600'
+                : 'text-red-600';
 
               return (
                 <TableRow key={holding.id}>

@@ -15,11 +15,11 @@ interface MarketPulseProps {
 }
 
 function getLabel(score: number): { text: string; color: string } {
-  if (score >= 75) return { text: 'Extreme Greed', color: 'text-green-600 dark:text-green-400' };
-  if (score >= 55) return { text: 'Greed', color: 'text-green-500 dark:text-green-400' };
-  if (score >= 45) return { text: 'Neutral', color: 'text-yellow-600 dark:text-yellow-400' };
-  if (score >= 25) return { text: 'Fear', color: 'text-orange-600 dark:text-orange-400' };
-  return { text: 'Extreme Fear', color: 'text-red-600 dark:text-red-400' };
+  if (score >= 75) return { text: 'Extreme Greed', color: 'text-green-600' };
+  if (score >= 55) return { text: 'Greed', color: 'text-green-500' };
+  if (score >= 45) return { text: 'Neutral', color: 'text-yellow-600' };
+  if (score >= 25) return { text: 'Fear', color: 'text-orange-600' };
+  return { text: 'Extreme Fear', color: 'text-red-600' };
 }
 
 export default function MarketPulse({
@@ -78,11 +78,11 @@ export default function MarketPulse({
 
   // Legend data
   const zones = [
-    { range: '0–24', label: 'Extreme Fear', color: 'bg-red-500', textColor: 'text-red-600 dark:text-red-400', meaning: 'Heavy selling, panic in markets' },
-    { range: '25–44', label: 'Fear', color: 'bg-orange-500', textColor: 'text-orange-600 dark:text-orange-400', meaning: 'Bearish sentiment, caution advised' },
-    { range: '45–54', label: 'Neutral', color: 'bg-yellow-500', textColor: 'text-yellow-600 dark:text-yellow-400', meaning: 'Balanced, no clear direction' },
-    { range: '55–74', label: 'Greed', color: 'bg-green-500', textColor: 'text-green-600 dark:text-green-400', meaning: 'Bullish sentiment, optimism rising' },
-    { range: '75–100', label: 'Extreme Greed', color: 'bg-emerald-500', textColor: 'text-emerald-600 dark:text-emerald-400', meaning: 'Euphoria, possible overvaluation' },
+    { range: '0–24', label: 'Extreme Fear', color: 'bg-red-500', textColor: 'text-red-600', meaning: 'Heavy selling, panic in markets' },
+    { range: '25–44', label: 'Fear', color: 'bg-orange-500', textColor: 'text-orange-600', meaning: 'Bearish sentiment, caution advised' },
+    { range: '45–54', label: 'Neutral', color: 'bg-yellow-500', textColor: 'text-yellow-600', meaning: 'Balanced, no clear direction' },
+    { range: '55–74', label: 'Greed', color: 'bg-green-500', textColor: 'text-green-600', meaning: 'Bullish sentiment, optimism rising' },
+    { range: '75–100', label: 'Extreme Greed', color: 'bg-emerald-500', textColor: 'text-emerald-600', meaning: 'Euphoria, possible overvaluation' },
   ];
 
   // Determine which zone is active

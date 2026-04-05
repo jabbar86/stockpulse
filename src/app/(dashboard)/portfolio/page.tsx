@@ -27,7 +27,11 @@ import {
   TrendingUpIcon,
   TrendingDownIcon,
   LayersIcon,
+  ChevronDownIcon,
 } from 'lucide-react';
+import { RiskDashboard } from '@/components/portfolio/risk-dashboard';
+import { CorrelationMatrix } from '@/components/portfolio/correlation-matrix';
+import { calculateRiskMetrics } from '@/lib/analysis/risk-scoring';
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -173,9 +177,11 @@ export default function PortfolioPage() {
   const totalPnlPercent = totalInvested > 0 ? (totalPnl / totalInvested) * 100 : 0;
   const totalDayChange = liveHoldings.reduce((sum, h) => sum + h.day_change, 0);
   const isProfit = totalPnl >= 0;
-  const pnlColor = isProfit
-    ? 'text-green-600 dark:text-green-400'
-    : 'text-red-600 dark:text-red-400';
+  const pnlColor = isProfit ? 'text-gain' : 'text-loss';
+  const bestPerformer = useMemo(() => {
+    if (liveHoldings.length === 0) return null;
+    return [...liveHoldings].sort((a, b) => b.pnl_percent - a.pnl_percent)[0];
+  }, [liveHoldings]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -205,81 +211,79 @@ export default function PortfolioPage() {
         </div>
       </div>
 
-      {/* Portfolio Summary Cards */}
+      {/* Portfolio Summary — 4 stat cards with accent gradient */}
       {!loading && liveHoldings.length > 0 && (
-        <Card className="border-none shadow-none sm:border sm:shadow-sm">
-          <CardContent className="px-3 sm:px-6 py-3 sm:py-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
-              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
-                <div className="flex items-center gap-1.5">
-                  <WalletIcon className="size-3.5 text-muted-foreground" />
-                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                    Total Value
-                  </p>
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+          <Card className="stat-card-accent overflow-hidden">
+            <div className="h-1 w-full bg-gradient-to-r from-primary to-primary/60" />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Value</span>
+                <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
+                  <WalletIcon className="size-4 text-primary" />
                 </div>
-                <p className="text-sm sm:text-lg font-bold tabular-nums mt-1">
-                  {formatCurrency(totalValue)}
-                </p>
               </div>
+              <p className="text-xl sm:text-2xl font-bold tabular-nums">
+                {formatCurrency(totalValue)}
+              </p>
+            </CardContent>
+          </Card>
 
-              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
-                <div className="flex items-center gap-1.5">
-                  <LayersIcon className="size-3.5 text-muted-foreground" />
-                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                    Invested
-                  </p>
+          <Card className="stat-card-accent overflow-hidden">
+            <div className={`h-1 w-full bg-gradient-to-r ${isProfit ? 'from-gain to-gain/60' : 'from-loss to-loss/60'}`} />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total P&L</span>
+                <div className={`flex size-8 items-center justify-center rounded-lg ${isProfit ? 'bg-gain/10' : 'bg-loss/10'}`}>
+                  {isProfit ? <TrendingUpIcon className="size-4 text-gain" /> : <TrendingDownIcon className="size-4 text-loss" />}
                 </div>
-                <p className="text-sm sm:text-lg font-bold tabular-nums mt-1">
-                  {formatCurrency(totalInvested)}
-                </p>
               </div>
+              <p className={`text-xl sm:text-2xl font-bold tabular-nums ${pnlColor}`}>
+                {formatCurrency(totalPnl)}
+              </p>
+              <p className={`text-xs tabular-nums mt-1 font-medium ${pnlColor}`}>
+                {formatPercent(totalPnlPercent)}
+              </p>
+            </CardContent>
+          </Card>
 
-              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
-                <div className="flex items-center gap-1.5">
-                  {isProfit ? (
-                    <TrendingUpIcon className="size-3.5 text-green-500" />
-                  ) : (
-                    <TrendingDownIcon className="size-3.5 text-red-500" />
-                  )}
-                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                    Total P&L
-                  </p>
+          <Card className="stat-card-accent overflow-hidden">
+            <div className={`h-1 w-full bg-gradient-to-r ${totalDayChange >= 0 ? 'from-gain to-chart-2' : 'from-loss to-chart-3'}`} />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Day Change</span>
+                <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
+                  <LayersIcon className="size-4 text-primary" />
                 </div>
-                <p className={`text-sm sm:text-lg font-bold tabular-nums mt-1 ${pnlColor}`}>
-                  {formatCurrency(totalPnl)}
-                </p>
-                <p className={`text-[10px] sm:text-xs ${pnlColor}`}>
-                  {formatPercent(totalPnlPercent)}
-                </p>
               </div>
+              <p className={`text-xl sm:text-2xl font-bold tabular-nums ${totalDayChange >= 0 ? 'text-gain' : 'text-loss'}`}>
+                {formatCurrency(totalDayChange)}
+              </p>
+            </CardContent>
+          </Card>
 
-              <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
-                <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                  Holdings
-                </p>
-                <p className="text-sm sm:text-lg font-bold mt-1">
-                  {liveHoldings.length}
-                </p>
-              </div>
-
-              {health && (
-                <div className="rounded-lg border bg-muted/40 px-3 py-2.5 flex flex-col justify-between">
-                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                    Health Score
-                  </p>
-                  <p className="text-sm sm:text-lg font-bold mt-1">
-                    {Math.round(health.score)}
-                  </p>
-                  {health.risk_tags.length > 0 && (
-                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                      {health.risk_tags[0]?.label}
-                    </p>
-                  )}
+          <Card className="stat-card-accent overflow-hidden">
+            <div className="h-1 w-full bg-gradient-to-r from-chart-4 via-primary to-chart-1" />
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground">Best Performer</span>
+                <div className="flex size-8 items-center justify-center rounded-lg bg-gain/10">
+                  <TrendingUpIcon className="size-4 text-gain" />
                 </div>
+              </div>
+              {bestPerformer ? (
+                <>
+                  <p className="text-xl sm:text-2xl font-bold">{bestPerformer.symbol}</p>
+                  <p className="text-xs tabular-nums mt-1 text-gain font-medium">
+                    +{formatCurrency(bestPerformer.pnl)}
+                  </p>
+                </>
+              ) : (
+                <p className="text-lg font-bold text-muted-foreground">—</p>
               )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Holdings */}
@@ -330,6 +334,14 @@ export default function PortfolioPage() {
           </Card>
         )}
       </div>
+
+      {/* Risk Dashboard & Correlation Matrix */}
+      {!loading && liveHoldings.length >= 2 && (
+        <div className="space-y-4">
+          <RiskDashboard metrics={calculateRiskMetrics(liveHoldings)} />
+          <CorrelationMatrix holdingSymbols={liveHoldings.map((h) => h.symbol)} />
+        </div>
+      )}
 
       {/* Add Holding Dialog */}
       <AddHoldingDialog

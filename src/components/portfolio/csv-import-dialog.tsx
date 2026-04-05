@@ -96,7 +96,7 @@ export default function CSVImportDialog({ open, onOpenChange, onSuccess }: CSVIm
 
         {result ? (
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+            <div className="flex items-center gap-2 text-green-600">
               <CheckCircle2Icon className="size-5" />
               <span className="font-medium">
                 Successfully imported {result.imported} holding{result.imported !== 1 ? 's' : ''}
@@ -135,7 +135,7 @@ export default function CSVImportDialog({ open, onOpenChange, onSuccess }: CSVIm
             >
               {file ? (
                 <>
-                  <FileSpreadsheetIcon className="size-8 text-green-600 dark:text-green-400" />
+                  <FileSpreadsheetIcon className="size-8 text-green-600" />
                   <p className="text-sm font-medium">{file.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {(file.size / 1024).toFixed(1)} KB
@@ -184,8 +184,8 @@ export default function CSVImportDialog({ open, onOpenChange, onSuccess }: CSVIm
             </div>
 
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/30">
-                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             )}
 

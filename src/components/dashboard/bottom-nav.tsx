@@ -42,7 +42,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur-lg md:hidden safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/80 backdrop-blur-xl md:hidden safe-area-bottom">
       <div className="flex items-center justify-around py-1.5 px-1">
         {navItems.map((item) => {
           const isActive =
@@ -53,10 +53,10 @@ export default function BottomNav() {
               href={item.href}
               title={item.title}
               className={cn(
-                'relative flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-colors min-w-[56px]',
+                'relative flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg text-[10px] font-medium transition-colors min-w-[44px] min-h-[44px] justify-center',
                 isActive
                   ? 'text-primary'
-                  : 'text-muted-foreground active:text-foreground'
+                  : 'text-muted-foreground/90 active:text-foreground'
               )}
             >
               <item.icon
@@ -68,7 +68,7 @@ export default function BottomNav() {
               />
               <span>{item.label}</span>
               {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-8 rounded-full bg-primary" />
+                <div className="absolute left-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-full bg-primary shadow-[0_0_8px_color-mix(in_oklch,var(--primary)_40%,transparent)]" />
               )}
             </DashboardLink>
           );

@@ -39,33 +39,42 @@ interface ProfileData {
 }
 
 export default function ProfilePage() {
-  const { signOut, refreshProfile } = useAuth();
+  const { signOut, refreshProfile, profile: authProfile, loading: authLoading } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchProfile() {
       try {
-        const res = await fetch('/api/profile');
+        const res = await fetch('/api/profile', { cache: 'no-store' });
+        if (cancelled) return;
         if (res.ok) {
           const data = await res.json();
           setProfile(data);
+          setLoadFailed(false);
+        } else {
+          setLoadFailed(true);
         }
       } catch {
-        // silently fail
+        if (!cancelled) setLoadFailed(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setDetailLoading(false);
       }
     }
     fetchProfile();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleEditStart = () => {
-    if (profile) {
-      setEditName(profile.name);
+    if (displayName) {
+      setEditName(displayName);
       setEditing(true);
     }
   };
@@ -86,7 +95,21 @@ export default function ProfilePage() {
       });
       if (res.ok) {
         const updated = await res.json();
-        setProfile((prev) => prev ? { ...prev, ...updated } : prev);
+        setProfile((prev) =>
+          prev
+            ? { ...prev, ...updated }
+            : {
+                id: updated.id,
+                name: updated.name,
+                email: updated.email,
+                is_premium: updated.is_premium,
+                max_ai_analyses: updated.max_ai_analyses,
+                created_at: updated.created_at,
+                ai_analyses_used: 0,
+                holdings_count: 0,
+                broker_connections: 0,
+              }
+        );
         setEditing(false);
         toast.success('Profile updated');
         refreshProfile();
@@ -100,14 +123,17 @@ export default function ProfilePage() {
     }
   };
 
-  const initials = profile
-    ? profile.name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase()
-        .slice(0, 2)
-    : '';
+  const canShowShell = !!(profile || authProfile);
+
+  const displayName = profile?.name ?? authProfile?.name ?? '';
+  const displayEmail = profile?.email ?? authProfile?.email ?? '';
+
+  const initials = (displayName || displayEmail || '?')
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
 
   const memberSince = profile
     ? new Date(profile.created_at).toLocaleDateString('en-IN', {
@@ -118,9 +144,9 @@ export default function ProfilePage() {
       })
     : '';
 
-  if (loading) {
+  if ((authLoading || detailLoading) && !canShowShell) {
     return (
-      <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto">
+      <div className="mx-auto max-w-2xl space-y-4 sm:space-y-6">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-48 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
@@ -128,13 +154,23 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profile) {
+  if (!canShowShell && !detailLoading && loadFailed) {
     return (
       <div className="flex items-center justify-center py-20">
         <p className="text-muted-foreground">Failed to load profile.</p>
       </div>
     );
   }
+
+  if (!canShowShell) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <p className="text-muted-foreground">Failed to load profile.</p>
+      </div>
+    );
+  }
+
+  const hasFullProfile = !!profile;
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-2xl mx-auto">
@@ -192,7 +228,9 @@ export default function ProfilePage() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-center sm:justify-start gap-2">
-                    <h2 className="text-xl sm:text-2xl font-bold">{profile.name || 'No name set'}</h2>
+                    <h2 className="text-xl font-bold sm:text-2xl">
+                      {displayName || 'No name set'}
+                    </h2>
                     <Button
                       size="icon"
                       variant="ghost"
@@ -208,26 +246,39 @@ export default function ProfilePage() {
               {/* Email */}
               <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground">
                 <MailIcon className="size-4" />
-                <span className="text-sm">{profile.email}</span>
+                <span className="text-sm">{displayEmail}</span>
               </div>
 
               {/* Badges */}
-              <div className="flex items-center justify-center sm:justify-start gap-2">
-                {profile.is_premium ? (
-                  <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-1">
-                    <SparklesIcon className="size-3" />
-                    Premium
-                  </Badge>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                {detailLoading && !hasFullProfile ? (
+                  <Skeleton className="h-6 w-28 rounded-full" />
+                ) : hasFullProfile ? (
+                  profile!.is_premium ? (
+                    <Badge className="gap-1 border-amber-500/30 bg-amber-500/10 text-amber-600">
+                      <SparklesIcon className="size-3" />
+                      Premium
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="gap-1">
+                      <UserIcon className="size-3" />
+                      Free
+                    </Badge>
+                  )
                 ) : (
                   <Badge variant="secondary" className="gap-1">
                     <UserIcon className="size-3" />
                     Free
                   </Badge>
                 )}
-                <Badge variant="outline" className="gap-1 text-muted-foreground">
-                  <CalendarIcon className="size-3" />
-                  Joined {memberSince}
-                </Badge>
+                {detailLoading && !memberSince ? (
+                  <Skeleton className="h-6 w-36 rounded-full" />
+                ) : memberSince ? (
+                  <Badge variant="outline" className="gap-1 text-muted-foreground">
+                    <CalendarIcon className="size-3" />
+                    Joined {memberSince}
+                  </Badge>
+                ) : null}
               </div>
             </div>
           </div>
@@ -240,48 +291,56 @@ export default function ProfilePage() {
           <CardTitle className="text-sm sm:text-base">Account Overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-blue-500/10">
-                <BrainCircuitIcon className="size-4 text-blue-500" />
+          {!hasFullProfile ? (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-[72px] w-full rounded-lg" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-blue-500/10">
+                  <BrainCircuitIcon className="size-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">AI Credits Used</p>
+                  <p className="text-sm font-semibold">
+                    {profile!.ai_analyses_used} / {profile!.max_ai_analyses}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">AI Analyses Used</p>
-                <p className="text-sm font-semibold">
-                  {profile.ai_analyses_used} / {profile.max_ai_analyses}
-                </p>
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-green-500/10">
+                  <BriefcaseIcon className="size-4 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Holdings</p>
+                  <p className="text-sm font-semibold">{profile!.holdings_count}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-purple-500/10">
+                  <Link2Icon className="size-4 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Brokers Connected</p>
+                  <p className="text-sm font-semibold">{profile!.broker_connections}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10">
+                  <ShieldIcon className="size-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Plan</p>
+                  <p className="text-sm font-semibold">
+                    {profile!.is_premium ? 'Premium' : 'Free'}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-green-500/10">
-                <BriefcaseIcon className="size-4 text-green-500" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Holdings</p>
-                <p className="text-sm font-semibold">{profile.holdings_count}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-purple-500/10">
-                <Link2Icon className="size-4 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Brokers Connected</p>
-                <p className="text-sm font-semibold">{profile.broker_connections}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="flex size-9 items-center justify-center rounded-lg bg-amber-500/10">
-                <ShieldIcon className="size-4 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Plan</p>
-                <p className="text-sm font-semibold">
-                  {profile.is_premium ? 'Premium' : 'Free'}
-                </p>
-              </div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

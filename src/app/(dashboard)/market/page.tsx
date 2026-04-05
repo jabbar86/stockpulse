@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MarketPulse from '@/components/market/market-pulse';
+import { SectorHeatmap } from '@/components/market/sector-heatmap';
 import { useLivePrices, type LivePrice } from '@/hooks/use-live-prices';
 import type { StockRecommendation } from '@/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -113,8 +114,8 @@ function PriceCard({ item, onClick, livePrice }: { item: MarketItem; onClick?: (
           <div
             className={`text-right shrink-0 ${
               isPositive
-                ? 'text-green-600 dark:text-green-400'
-                : 'text-red-600 dark:text-red-400'
+                ? 'text-green-600'
+                : 'text-red-600'
             }`}
           >
             <div className="flex items-center gap-0.5 justify-end">
@@ -185,8 +186,8 @@ function StockRow({
         <p
           className={`text-[10px] sm:text-sm font-medium tabular-nums ${
             isPositive
-              ? 'text-green-600 dark:text-green-400'
-              : 'text-red-600 dark:text-red-400'
+              ? 'text-green-600'
+              : 'text-red-600'
           }`}
         >
           {isPositive ? '+' : ''}
@@ -228,8 +229,8 @@ function StockCard({
         'hover:border-primary/25 hover:bg-muted/30 hover:shadow-sm',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
         isPositive
-          ? 'border-l-[3px] border-l-emerald-600 dark:border-l-emerald-500'
-          : 'border-l-[3px] border-l-red-500 dark:border-l-red-500'
+          ? 'border-l-[3px] border-l-emerald-600'
+          : 'border-l-[3px] border-l-red-500'
       )}
     >
       <div className="px-3 py-3 sm:px-3.5 sm:py-3.5">
@@ -241,8 +242,8 @@ function StockCard({
             className={cn(
               'shrink-0 font-mono text-[11px] font-semibold tabular-nums',
               isPositive
-                ? 'text-emerald-700 dark:text-emerald-400'
-                : 'text-red-600 dark:text-red-400'
+                ? 'text-emerald-700'
+                : 'text-red-600'
             )}
           >
             {isPositive ? '+' : ''}
@@ -419,8 +420,8 @@ export default function MarketPage() {
             marketStatus.isOpen ? (
               <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full ${
                 liveConnected
-                  ? 'bg-green-500/10 text-green-600 dark:text-green-400'
-                  : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400'
+                  ? 'bg-green-500/10 text-green-600'
+                  : 'bg-yellow-500/10 text-yellow-600'
               }`}>
                 {liveConnected ? (
                   <>
@@ -436,7 +437,7 @@ export default function MarketPage() {
                 )}
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400">
+              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600">
                 <span className="size-1.5 rounded-full bg-orange-500" />
                 <span className="hidden sm:inline">{marketStatus.message || 'Market Closed'}</span>
                 <span className="sm:hidden">Closed</span>
@@ -677,7 +678,7 @@ export default function MarketPage() {
               <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
                 <TrendingUpIcon className="size-4 sm:size-5 text-green-500" />
                 Top Gainers
-                <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 ml-auto text-[10px] sm:text-xs">
+                <Badge className="bg-green-500/10 text-green-600 ml-auto text-[10px] sm:text-xs">
                   NSE
                 </Badge>
               </CardTitle>
@@ -708,7 +709,7 @@ export default function MarketPage() {
               <CardTitle className="flex items-center gap-2 text-sm sm:text-lg">
                 <TrendingDownIcon className="size-4 sm:size-5 text-red-500" />
                 Top Losers
-                <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 ml-auto text-[10px] sm:text-xs">
+                <Badge className="bg-red-500/10 text-red-600 ml-auto text-[10px] sm:text-xs">
                   NSE
                 </Badge>
               </CardTitle>
@@ -734,6 +735,24 @@ export default function MarketPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Sector Heatmap */}
+      {data?.sectors && Object.keys(data.sectors).length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-2">
+            <BarChart3Icon className="size-4 sm:size-5 text-primary" />
+            <h2 className="text-sm sm:text-lg font-semibold">Sector Performance</h2>
+          </div>
+          <SectorHeatmap
+            sectors={Object.fromEntries(
+              Object.entries(data.sectors).map(([name, stocks]) => [
+                name,
+                stocks.map((s) => ({ changePercent: s.changePercent })),
+              ])
+            )}
+          />
+        </section>
       )}
 
       {/* Stocks by Sector */}
@@ -862,8 +881,8 @@ export default function MarketPage() {
                     onClick={() => { setStockFilter(f); setVisibleCount(12); }}
                     className={`px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-medium transition-colors ${
                       stockFilter === f
-                        ? f === 'gainers' ? 'bg-green-500/15 text-green-600 dark:text-green-400'
-                        : f === 'losers' ? 'bg-red-500/15 text-red-600 dark:text-red-400'
+                        ? f === 'gainers' ? 'bg-green-500/15 text-green-600'
+                        : f === 'losers' ? 'bg-red-500/15 text-red-600'
                         : 'bg-primary/10 text-primary'
                         : 'hover:bg-muted/50 text-muted-foreground'
                     }`}

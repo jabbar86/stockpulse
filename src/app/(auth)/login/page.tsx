@@ -72,24 +72,24 @@ function LoginForm() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center space-y-1.5">
+    <div className="space-y-7">
+      <div className="text-center space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
-        <p className="text-base text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Sign in to your StockPulse account
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {justVerified && (
-          <div className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-sm p-3.5 rounded-xl text-center font-medium flex items-center justify-center gap-2">
+          <div className="bg-gain/10 text-gain text-sm p-3.5 rounded-xl text-center font-medium flex items-center justify-center gap-2">
             <CheckCircle2Icon className="size-4" />
             Email verified! You can now sign in.
           </div>
         )}
 
         {needsVerification && (
-          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-sm p-4 rounded-xl text-center space-y-3">
+          <div className="bg-amber-500/10 border border-amber-500/20 text-amber-700 text-sm p-4 rounded-xl text-center space-y-3">
             <div className="flex justify-center">
               <div className="size-10 rounded-full bg-amber-500/10 flex items-center justify-center">
                 <MailIcon className="size-5" />
@@ -101,7 +101,7 @@ function LoginForm() {
               <span className="font-semibold">{email}</span>
             </p>
             {resent ? (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-1">
+              <p className="text-xs text-gain font-medium flex items-center justify-center gap-1">
                 <CheckCircle2Icon className="size-3" />
                 Verification email resent!
               </p>
@@ -122,53 +122,59 @@ function LoginForm() {
         )}
 
         {error && (
-          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-xl text-center font-medium">
+          <div className="bg-destructive/10 text-destructive text-sm p-3.5 rounded-xl text-center font-medium">
             {error}
           </div>
         )}
 
-        <div className="space-y-1.5">
-          <Label htmlFor="email" className="text-sm font-medium text-muted-foreground">Email</Label>
-          <div className="relative">
-            <AtSignIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoFocus
-              className="h-12 text-base pl-10 rounded-xl bg-muted/30 border-muted-foreground/10 focus:bg-background transition-colors"
-            />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+            <div className="relative">
+              <AtSignIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                className="h-12 text-base pl-10 rounded-xl border-border/60 focus:border-primary focus:ring-primary/20 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+            <div className="relative">
+              <LockIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="h-12 text-base pl-10 pr-10 rounded-xl border-border/60 focus:border-primary focus:ring-primary/20 transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="password" className="text-sm font-medium text-muted-foreground">Password</Label>
-          <div className="relative">
-            <LockIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50" />
-            <Input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="h-12 text-base pl-10 pr-10 rounded-xl bg-muted/30 border-muted-foreground/10 focus:bg-background transition-colors"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-foreground transition-colors"
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
-            </button>
-          </div>
-        </div>
-
-        <Button type="submit" className="w-full h-12 font-semibold rounded-xl text-base" disabled={loading}>
+        <Button
+          type="submit"
+          className="w-full h-12 font-semibold rounded-xl text-base shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/25 transition-all"
+          disabled={loading}
+        >
           {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
           Sign in
         </Button>
@@ -176,7 +182,7 @@ function LoginForm() {
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-muted-foreground/10" />
+          <div className="w-full border-t border-border/50" />
         </div>
         <div className="relative flex justify-center text-xs">
           <span className="bg-background px-3 text-muted-foreground/50">or</span>
@@ -186,7 +192,7 @@ function LoginForm() {
       <p className="text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{' '}
         <Link href="/register" className="text-primary font-semibold hover:underline">
-          Sign up
+          Sign up free
         </Link>
       </p>
     </div>

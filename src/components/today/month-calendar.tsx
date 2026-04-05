@@ -114,7 +114,7 @@ export function MonthCalendar({ reminders, bookEvents }: MonthCalendarProps) {
                       <span className="size-1.5 rounded-full bg-primary" title="SIP / reminder" />
                     )}
                     {book.length > 0 && (
-                      <span className="size-1.5 rounded-full bg-amber-500 dark:bg-amber-400" title="Book event" />
+                      <span className="size-1.5 rounded-full bg-amber-500" title="Book event" />
                     )}
                   </span>
                 </div>
@@ -130,7 +130,7 @@ export function MonthCalendar({ reminders, bookEvents }: MonthCalendarProps) {
           SIP / monthly
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="size-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+          <span className="size-1.5 rounded-full bg-amber-500" />
           Earnings / dividend
         </span>
       </div>

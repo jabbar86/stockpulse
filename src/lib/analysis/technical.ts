@@ -1,5 +1,6 @@
 import { RSI, MACD, SMA, EMA, BollingerBands } from 'technicalindicators';
 import type { HistoricalDataPoint, TechnicalIndicators } from '@/types';
+import { calculateATR, calculateVWAP, calculateFibonacciLevels } from './technical-extended';
 
 function last<T>(arr: T[]): T {
   return arr[arr.length - 1];
@@ -88,6 +89,11 @@ export function calculateTechnicalIndicators(
 
   const overallSignal = mapScoreToSignal(score);
 
+  // Extended technicals
+  const atr = calculateATR(historicalData);
+  const vwap = calculateVWAP(historicalData);
+  const fibonacci = calculateFibonacciLevels(historicalData) ?? undefined;
+
   return {
     rsi: { value: Math.round(rsiValue * 100) / 100, signal: rsiSignal },
     macd: {
@@ -113,6 +119,9 @@ export function calculateTechnicalIndicators(
     },
     overallSignal,
     score,
+    atr: atr || undefined,
+    vwap: vwap || undefined,
+    fibonacci,
   };
 }
 

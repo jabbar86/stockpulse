@@ -15,7 +15,7 @@ export default function OpenGraphImage() {
           flexDirection: 'column',
           alignItems: 'flex-start',
           justifyContent: 'center',
-          background: 'linear-gradient(145deg, #0c1222 0%, #134e2a 42%, #0c1222 100%)',
+          background: 'linear-gradient(145deg, #1e3a5f 0%, #2563eb 42%, #1e3a5f 100%)',
           padding: 72,
           color: '#f8fafc',
           fontFamily:
@@ -35,8 +35,8 @@ export default function OpenGraphImage() {
               width: 56,
               height: 56,
               borderRadius: 14,
-              background: 'rgba(52, 211, 153, 0.25)',
-              border: '1px solid rgba(52, 211, 153, 0.45)',
+              background: 'rgba(59, 130, 246, 0.3)',
+              border: '1px solid rgba(59, 130, 246, 0.5)',
             }}
           />
           <span style={{ fontSize: 58, fontWeight: 800, letterSpacing: '-0.05em' }}>StockPulse</span>

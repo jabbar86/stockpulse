@@ -1,4 +1,5 @@
-import OpenAI from 'openai';
+import { route } from '@/lib/ai/router';
+import { getCachedAnalysis, setCachedAnalysis } from '@/lib/ai/cache';
 import type {
   StockQuote,
   TechnicalIndicators,
@@ -6,14 +7,6 @@ import type {
   AIAnalysis,
   HoldingWithMetrics,
 } from '@/types';
-
-function getClient(): OpenAI {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY is not configured. Add it to your .env.local file.');
-  }
-  return new OpenAI({ apiKey });
-}
 
 export async function analyzeStock(
   symbol: string,
@@ -72,22 +65,23 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
   "sector_outlook": "<1-2 sentence sector outlook>"
 }`;
 
+  // Check cache first
+  const cached = await getCachedAnalysis(symbol, prompt);
+  if (cached) {
+    try {
+      return JSON.parse(cached.result) as AIAnalysis;
+    } catch {
+      // Invalid cache entry, continue to fresh analysis
+    }
+  }
+
   try {
-    const client = getClient();
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 1024,
+    const response = await route({
+      task: 'stock_analysis',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
     });
 
-    const text = response.choices[0]?.message?.content?.trim();
-    if (!text) {
-      throw new Error('No text response from OpenAI');
-    }
-
-    // Strip any markdown fences if present
-    let cleaned = text;
+    let cleaned = response.text.trim();
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
     }
@@ -101,13 +95,16 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
       !Array.isArray(parsed.key_factors) ||
       !Array.isArray(parsed.risks)
     ) {
-      throw new Error('Invalid response structure from OpenAI');
+      throw new Error('Invalid response structure from AI');
     }
+
+    // Cache the result
+    await setCachedAnalysis(symbol, prompt, JSON.stringify(parsed), response.model);
 
     return parsed;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('Failed to parse OpenAI response as JSON');
+      throw new Error('Failed to parse AI response as JSON');
     }
     throw new Error(
       `AI analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`
@@ -159,21 +156,23 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
   "sector_breakdown": "<brief sector concentration analysis>"
 }`;
 
+  // Check cache (use "PORTFOLIO" as symbol key)
+  const cached = await getCachedAnalysis('PORTFOLIO', prompt);
+  if (cached) {
+    try {
+      return JSON.parse(cached.result);
+    } catch {
+      // Continue to fresh analysis
+    }
+  }
+
   try {
-    const client = getClient();
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o',
-      max_tokens: 1024,
+    const response = await route({
+      task: 'portfolio_analysis',
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
     });
 
-    const text = response.choices[0]?.message?.content?.trim();
-    if (!text) {
-      throw new Error('No text response from OpenAI');
-    }
-
-    let cleaned = text;
+    let cleaned = response.text.trim();
     if (cleaned.startsWith('```')) {
       cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim();
     }
@@ -189,10 +188,13 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
       throw new Error('Invalid portfolio analysis response structure');
     }
 
+    // Cache the result
+    await setCachedAnalysis('PORTFOLIO', prompt, JSON.stringify(parsed), response.model);
+
     return parsed;
   } catch (error) {
     if (error instanceof SyntaxError) {
-      throw new Error('Failed to parse OpenAI portfolio analysis response');
+      throw new Error('Failed to parse AI portfolio analysis response');
     }
     throw new Error(
       `Portfolio analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`

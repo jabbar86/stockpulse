@@ -25,10 +25,8 @@ function TickerItemView({ item }: { item: TickerItem }) {
       <span className="text-xs sm:text-base font-semibold">{item.symbol}</span>
       <span className="text-xs sm:text-base tabular-nums">{formatPrice(item.price)}</span>
       <span
-        className={`flex items-center gap-0.5 text-[11px] sm:text-sm font-medium tabular-nums ${
-          isPositive
-            ? 'text-green-600 dark:text-green-400'
-            : 'text-red-600 dark:text-red-400'
+        className={`flex items-center gap-0.5 text-[11px] font-medium tabular-nums sm:text-sm ${
+          isPositive ? 'text-gain' : 'text-loss'
         }`}
       >
         {isPositive ? (
@@ -104,10 +102,13 @@ export default function TickerTape() {
   const doubled = [...items, ...items];
 
   return (
-    <div className="w-full overflow-hidden border-b bg-card/80 backdrop-blur-sm py-1">
+    <div className="w-full overflow-hidden border-b border-border bg-card/90 py-1.5 backdrop-blur-md">
       <div className="flex animate-ticker hover:[animation-play-state:paused]">
         {doubled.map((item, i) => (
-          <TickerItemView key={`${item.symbol}-${i}`} item={item} />
+          <div key={`${item.symbol}-${i}`} className="flex items-center">
+            <TickerItemView item={item} />
+            <span className="h-4 w-px shrink-0 bg-border" aria-hidden />
+          </div>
         ))}
       </div>
     </div>

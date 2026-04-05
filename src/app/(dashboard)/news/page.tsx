@@ -44,13 +44,13 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
-  markets: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  stocks: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  economy: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  ipo: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-  'mutual-funds': 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
-  crypto: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-  general: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
+  markets: 'bg-blue-500/10 text-blue-600',
+  stocks: 'bg-emerald-500/10 text-emerald-600',
+  economy: 'bg-amber-500/10 text-amber-600',
+  ipo: 'bg-purple-500/10 text-purple-600',
+  'mutual-funds': 'bg-teal-500/10 text-teal-600',
+  crypto: 'bg-orange-500/10 text-orange-600',
+  general: 'bg-gray-500/10 text-gray-600',
 };
 
 function timeAgo(dateStr: string): string {
@@ -164,7 +164,7 @@ export default function NewsPage() {
           <p className="text-sm text-muted-foreground mt-1">
             Latest Indian stock market headlines
             {isMarketOpen() && (
-              <span className="ml-2 text-xs text-green-600 dark:text-green-400">
+              <span className="ml-2 text-xs text-green-600">
                 · Auto-refreshes every 30 min
               </span>
             )}

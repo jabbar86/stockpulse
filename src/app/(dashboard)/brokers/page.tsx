@@ -57,7 +57,7 @@ const API_BROKERS: ApiBroker[] = [
     name: 'Zerodha',
     description: 'Auto-import via Kite Connect. Just login with your Kite credentials.',
     authUrl: '/api/brokers/zerodha/auth',
-    color: 'text-rose-600 dark:text-rose-400',
+    color: 'text-rose-600',
     bgColor: 'bg-rose-500/10',
     loginLabel: 'Login with Zerodha',
   },
@@ -66,7 +66,7 @@ const API_BROKERS: ApiBroker[] = [
     name: 'Upstox',
     description: 'Auto-import holdings and real-time prices from Upstox.',
     authUrl: '/api/brokers/upstox/auth',
-    color: 'text-purple-600 dark:text-purple-400',
+    color: 'text-purple-600',
     bgColor: 'bg-purple-500/10',
     loginLabel: 'Login with Upstox',
   },
@@ -75,7 +75,7 @@ const API_BROKERS: ApiBroker[] = [
     name: 'Angel One',
     description: 'Connect via SmartAPI for real-time holdings sync.',
     authUrl: '/api/brokers/angelone/auth',
-    color: 'text-orange-600 dark:text-orange-400',
+    color: 'text-orange-600',
     bgColor: 'bg-orange-500/10',
     loginLabel: 'Login with Angel One',
   },
@@ -84,7 +84,7 @@ const API_BROKERS: ApiBroker[] = [
     name: 'FYERS',
     description: 'Auto-sync your FYERS portfolio via API.',
     authUrl: '/api/brokers/fyers/auth',
-    color: 'text-blue-600 dark:text-blue-400',
+    color: 'text-blue-600',
     bgColor: 'bg-blue-500/10',
     loginLabel: 'Login with FYERS',
   },
@@ -93,7 +93,7 @@ const API_BROKERS: ApiBroker[] = [
     name: 'Dhan',
     description: 'Import holdings from Dhan via their HQ API.',
     authUrl: '/api/brokers/dhan/auth',
-    color: 'text-cyan-600 dark:text-cyan-400',
+    color: 'text-cyan-600',
     bgColor: 'bg-cyan-500/10',
     loginLabel: 'Login with Dhan',
   },
@@ -102,7 +102,7 @@ const API_BROKERS: ApiBroker[] = [
     name: '5paisa',
     description: 'Connect via 5paisa Open API for holdings.',
     authUrl: '/api/brokers/5paisa/auth',
-    color: 'text-indigo-600 dark:text-indigo-400',
+    color: 'text-indigo-600',
     bgColor: 'bg-indigo-500/10',
     loginLabel: 'Login with 5paisa',
   },
@@ -111,7 +111,7 @@ const API_BROKERS: ApiBroker[] = [
     name: 'ICICI Direct',
     description: 'Auto-import via Breeze API. Login with your ICICI Direct account.',
     authUrl: '/api/brokers/icici/auth',
-    color: 'text-blue-700 dark:text-blue-300',
+    color: 'text-blue-700',
     bgColor: 'bg-blue-500/10',
     loginLabel: 'Login with ICICI Direct',
   },
@@ -120,7 +120,7 @@ const API_BROKERS: ApiBroker[] = [
     name: 'Kotak Securities',
     description: 'Auto-sync via Kotak Neo API. Login with your Kotak account.',
     authUrl: '/api/brokers/kotak/auth',
-    color: 'text-red-600 dark:text-red-400',
+    color: 'text-red-600',
     bgColor: 'bg-red-500/10',
     loginLabel: 'Login with Kotak',
   },
@@ -131,35 +131,35 @@ const CSV_BROKERS: CsvBroker[] = [
     id: 'groww',
     name: 'Groww',
     description: 'Export holdings CSV from Groww app and upload here.',
-    color: 'text-green-600 dark:text-green-400',
+    color: 'text-green-600',
     bgColor: 'bg-green-500/10',
   },
   {
     id: 'hdfc',
     name: 'HDFC Securities',
     description: 'Export holdings from HDFC Securities portal.',
-    color: 'text-blue-600 dark:text-blue-400',
+    color: 'text-blue-600',
     bgColor: 'bg-blue-500/10',
   },
   {
     id: 'motilal',
     name: 'Motilal Oswal',
     description: 'Download holdings from MO Investor platform.',
-    color: 'text-amber-600 dark:text-amber-400',
+    color: 'text-amber-600',
     bgColor: 'bg-amber-500/10',
   },
   {
     id: 'sharekhan',
     name: 'Sharekhan',
     description: 'Export from Sharekhan or Trade Tiger platform.',
-    color: 'text-teal-600 dark:text-teal-400',
+    color: 'text-teal-600',
     bgColor: 'bg-teal-500/10',
   },
   {
     id: 'paytm',
     name: 'Paytm Money',
     description: 'Export your stock holdings from Paytm Money app.',
-    color: 'text-sky-600 dark:text-sky-400',
+    color: 'text-sky-600',
     bgColor: 'bg-sky-500/10',
   },
 ];
@@ -418,7 +418,7 @@ export default function BrokersPage() {
           <Card className="border-dashed">
             <CardContent className="p-4 sm:p-6 flex items-center gap-4">
               <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500/10 shrink-0">
-                <PlusIcon className="size-6 text-blue-600 dark:text-blue-400" />
+                <PlusIcon className="size-6 text-blue-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm sm:text-base">Add Manually</p>
@@ -443,7 +443,7 @@ export default function BrokersPage() {
           <Card className="border-dashed">
             <CardContent className="p-4 sm:p-6 flex items-center gap-4">
               <div className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/10 shrink-0">
-                <UploadIcon className="size-6 text-emerald-600 dark:text-emerald-400" />
+                <UploadIcon className="size-6 text-emerald-600" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm sm:text-base">CSV Import</p>
@@ -467,7 +467,7 @@ export default function BrokersPage() {
             Connect Broker (Auto-sync)
             <span className="ml-2 text-xs font-normal">— {API_BROKERS.length} brokers</span>
           </h2>
-          <Badge className="bg-amber-500/10 text-amber-600 dark:text-amber-400 gap-1 text-[10px]">
+          <Badge className="bg-amber-500/10 text-amber-600 gap-1 text-[10px]">
             <CrownIcon className="size-2.5" />
             Premium
           </Badge>
@@ -505,7 +505,7 @@ export default function BrokersPage() {
               <CardContent className="p-5 sm:p-6">
                 <div className="text-center mb-4">
                   <div className="flex size-12 items-center justify-center rounded-full bg-amber-500/10 mx-auto mb-3">
-                    <LockIcon className="size-6 text-amber-600 dark:text-amber-400" />
+                    <LockIcon className="size-6 text-amber-600" />
                   </div>
                   <h3 className="text-base sm:text-lg font-semibold">Premium Feature</h3>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -515,8 +515,8 @@ export default function BrokersPage() {
 
                 {premiumRequested ? (
                   <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4 text-center">
-                    <CheckCircle2Icon className="size-8 text-green-600 dark:text-green-400 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-green-700 dark:text-green-300">Request Submitted!</p>
+                    <CheckCircle2Icon className="size-8 text-green-600 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-green-700">Submitted!</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       We&apos;ll review your request and get back to you shortly.
                     </p>
@@ -670,7 +670,7 @@ export default function BrokersPage() {
       {/* Security Note */}
       <Card className="bg-muted/30 border-dashed">
         <CardContent className="p-4 sm:p-5 flex gap-3">
-          <ShieldCheckIcon className="size-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <ShieldCheckIcon className="size-5 text-emerald-600 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium">Your data is secure</p>
             <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 leading-relaxed">

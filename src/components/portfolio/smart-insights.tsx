@@ -50,7 +50,7 @@ function generateInsights(holdings: HoldingWithMetrics[]): Insight[] {
       icon: TrophyIcon,
       title: 'Star Performer',
       description: `${best.symbol} is your best holding at +${best.pnl_percent.toFixed(1)}% (${formatCurrency(best.pnl)} profit)`,
-      color: 'text-amber-600 dark:text-amber-400',
+      color: 'text-amber-600',
       bgColor: 'bg-amber-500/10',
     });
   }
@@ -62,7 +62,7 @@ function generateInsights(holdings: HoldingWithMetrics[]): Insight[] {
       icon: AlertTriangleIcon,
       title: 'Needs Attention',
       description: `${worst.symbol} is down ${worst.pnl_percent.toFixed(1)}% — review if your thesis still holds`,
-      color: 'text-red-600 dark:text-red-400',
+      color: 'text-red-600',
       bgColor: 'bg-red-500/10',
     });
   }
@@ -76,7 +76,7 @@ function generateInsights(holdings: HoldingWithMetrics[]): Insight[] {
       icon: PieChartIcon,
       title: 'Concentration Risk',
       description: `${topHolding.symbol} is ${topPercent.toFixed(0)}% of your portfolio — consider diversifying`,
-      color: 'text-orange-600 dark:text-orange-400',
+      color: 'text-orange-600',
       bgColor: 'bg-orange-500/10',
     });
   }
@@ -87,7 +87,7 @@ function generateInsights(holdings: HoldingWithMetrics[]): Insight[] {
       icon: ShieldIcon,
       title: 'Well Diversified',
       description: `${holdings.length} stocks with no single holding above 25% — good risk management`,
-      color: 'text-green-600 dark:text-green-400',
+      color: 'text-green-600',
       bgColor: 'bg-green-500/10',
     });
   }
@@ -102,7 +102,7 @@ function generateInsights(holdings: HoldingWithMetrics[]): Insight[] {
         icon: TrendingUpIcon,
         title: 'Strong Day',
         description: `${gainersToday} of ${holdings.length} stocks are green today — momentum is in your favor`,
-        color: 'text-green-600 dark:text-green-400',
+        color: 'text-green-600',
         bgColor: 'bg-green-500/10',
       });
     } else if (ratio <= 0.3) {
@@ -110,7 +110,7 @@ function generateInsights(holdings: HoldingWithMetrics[]): Insight[] {
         icon: ZapIcon,
         title: 'Rough Day',
         description: `${losersToday} of ${holdings.length} stocks are red today — stay patient`,
-        color: 'text-red-600 dark:text-red-400',
+        color: 'text-red-600',
         bgColor: 'bg-red-500/10',
       });
     }
@@ -124,7 +124,7 @@ function generateInsights(holdings: HoldingWithMetrics[]): Insight[] {
         icon: TrophyIcon,
         title: 'Portfolio Milestone',
         description: `Your portfolio has crossed ${crores.toFixed(1)} Cr — impressive growth!`,
-        color: 'text-violet-600 dark:text-violet-400',
+        color: 'text-violet-600',
         bgColor: 'bg-violet-500/10',
       });
     } else {
@@ -132,7 +132,7 @@ function generateInsights(holdings: HoldingWithMetrics[]): Insight[] {
         icon: TrendingUpIcon,
         title: 'Portfolio Milestone',
         description: `Your portfolio is worth ${formatCurrency(totalValue)} — keep growing!`,
-        color: 'text-blue-600 dark:text-blue-400',
+        color: 'text-blue-600',
         bgColor: 'bg-blue-500/10',
       });
     }

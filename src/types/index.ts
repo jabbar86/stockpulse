@@ -120,6 +120,29 @@ export interface TechnicalIndicators {
   };
   overallSignal: 'strong_buy' | 'buy' | 'neutral' | 'sell' | 'strong_sell';
   score: number; // -100 to 100
+  /** Average True Range (14-period) — optional, populated when extended technicals are computed */
+  atr?: number;
+  /** Volume Weighted Average Price — optional, for intraday data */
+  vwap?: number;
+  /** Fibonacci retracement levels — optional */
+  fibonacci?: {
+    swingHigh: number;
+    swingLow: number;
+    levels: { ratio: number; label: string; price: number }[];
+  };
+}
+
+export interface RiskMetrics {
+  score: number;
+  beta: number;
+  volatility: number;
+  hhi: number;
+  sectorCount: number;
+  breakdown: {
+    concentration: number;
+    volatility: number;
+    beta: number;
+  };
 }
 
 export interface AIAnalysis {

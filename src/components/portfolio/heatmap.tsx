@@ -8,14 +8,14 @@ interface HeatmapProps {
 }
 
 function getPnlColor(pnlPercent: number): string {
-  if (pnlPercent >= 10) return 'bg-green-600 dark:bg-green-500';
-  if (pnlPercent >= 5) return 'bg-green-500 dark:bg-green-500/80';
-  if (pnlPercent >= 2) return 'bg-green-400 dark:bg-green-600/70';
-  if (pnlPercent >= 0) return 'bg-green-300 dark:bg-green-700/60';
-  if (pnlPercent >= -2) return 'bg-red-300 dark:bg-red-700/60';
-  if (pnlPercent >= -5) return 'bg-red-400 dark:bg-red-600/70';
-  if (pnlPercent >= -10) return 'bg-red-500 dark:bg-red-500/80';
-  return 'bg-red-600 dark:bg-red-500';
+  if (pnlPercent >= 10) return 'bg-green-600';
+  if (pnlPercent >= 5) return 'bg-green-500';
+  if (pnlPercent >= 2) return 'bg-green-400';
+  if (pnlPercent >= 0) return 'bg-green-300';
+  if (pnlPercent >= -2) return 'bg-red-300';
+  if (pnlPercent >= -5) return 'bg-red-400';
+  if (pnlPercent >= -10) return 'bg-red-500';
+  return 'bg-red-600';
 }
 
 function formatCurrency(value: number): string {
@@ -259,8 +259,8 @@ export default function PortfolioHeatmap({ holdings }: HeatmapProps) {
               <p
                 className={`text-[11px] font-medium tabular-nums ${
                   tooltip.holding.pnl >= 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-red-600 dark:text-red-400'
+                    ? 'text-green-600'
+                    : 'text-red-600'
                 }`}
               >
                 {tooltip.holding.pnl_percent >= 0 ? '+' : ''}
@@ -275,12 +275,12 @@ export default function PortfolioHeatmap({ holdings }: HeatmapProps) {
       <div className="flex items-center justify-center gap-1 mt-2">
         <span className="text-[9px] text-muted-foreground">Loss</span>
         <div className="flex gap-0.5">
-          <div className="size-2.5 rounded-sm bg-red-600 dark:bg-red-500" />
-          <div className="size-2.5 rounded-sm bg-red-400 dark:bg-red-600/70" />
-          <div className="size-2.5 rounded-sm bg-red-300 dark:bg-red-700/60" />
-          <div className="size-2.5 rounded-sm bg-green-300 dark:bg-green-700/60" />
-          <div className="size-2.5 rounded-sm bg-green-400 dark:bg-green-600/70" />
-          <div className="size-2.5 rounded-sm bg-green-600 dark:bg-green-500" />
+          <div className="size-2.5 rounded-sm bg-red-600" />
+          <div className="size-2.5 rounded-sm bg-red-400" />
+          <div className="size-2.5 rounded-sm bg-red-300" />
+          <div className="size-2.5 rounded-sm bg-green-300" />
+          <div className="size-2.5 rounded-sm bg-green-400" />
+          <div className="size-2.5 rounded-sm bg-green-600" />
         </div>
         <span className="text-[9px] text-muted-foreground">Profit</span>
       </div>

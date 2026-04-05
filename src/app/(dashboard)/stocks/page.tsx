@@ -152,7 +152,7 @@ export default function StocksPage() {
         }}
         className={`inline-flex items-center justify-center rounded-full border px-2 py-1 text-xs transition-colors ${
           active
-            ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-600 dark:text-yellow-400'
+            ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-600'
             : 'bg-transparent border-muted text-muted-foreground hover:bg-muted/40'
         }`}
       >
@@ -343,8 +343,8 @@ export default function StocksPage() {
                         <p
                           className={`text-[10px] tabular-nums ${
                             live && live.changePercent >= 0
-                              ? 'text-green-600 dark:text-green-400'
-                              : 'text-red-600 dark:text-red-400'
+                              ? 'text-green-600'
+                              : 'text-red-600'
                           }`}
                         >
                           {live ? formatPercent(live.changePercent) : '--'}

@@ -126,6 +126,13 @@ create index if not exists idx_market_news_published on market_news(published_at
 create index if not exists idx_market_news_category on market_news(category);
 create index if not exists idx_holdings_user_id on holdings(user_id);
 create index if not exists idx_broker_connections_user_id on broker_connections(user_id);
+-- Profile API counts: partial indexes (see migrations/003_profile_api_indexes.sql)
+create index if not exists idx_analysis_history_user_ai_noncached
+  on analysis_history (user_id)
+  where type = 'ai' and cached = false;
+create index if not exists idx_broker_connections_user_connected
+  on broker_connections (user_id)
+  where status = 'connected';
 create index if not exists idx_analysis_cache_symbol_type on analysis_cache(symbol, type);
 create index if not exists idx_analysis_history_user_created on analysis_history(user_id, created_at);
 create index if not exists idx_watchlist_user_id on watchlist(user_id);

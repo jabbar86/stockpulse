@@ -35,6 +35,7 @@ import {
   WifiIcon,
   WifiOffIcon,
 } from 'lucide-react';
+import { MorningBriefCard } from '@/components/today/morning-brief-card';
 
 function formatInr(value: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -261,7 +262,7 @@ export default function TodayPage() {
       )}
 
       {wsHint && !bootstrapLoading && (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-200">
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950">
           {wsHint}
         </p>
       )}
@@ -300,8 +301,8 @@ export default function TodayPage() {
               <Badge
                 variant="outline"
                 className={cn(
-                  'gap-1.5 border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400',
-                  !connected && 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-400'
+                  'gap-1.5 border-green-500/30 bg-green-500/10 text-green-700',
+                  !connected && 'border-amber-500/30 bg-amber-500/10 text-amber-800'
                 )}
               >
                 {connected ? <WifiIcon className="size-3.5" /> : <WifiOffIcon className="size-3.5" />}
@@ -324,6 +325,9 @@ export default function TodayPage() {
           calendar hints on your book, plus notes and reminders.
         </p>
       </section>
+
+      {/* AI Morning Brief */}
+      {!bootstrapLoading && <MorningBriefCard />}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2 border-primary/10">
@@ -374,8 +378,8 @@ export default function TodayPage() {
                         className={cn(
                           'mt-1 text-xl font-bold tabular-nums sm:text-2xl',
                           liveSummary.day_change_percent >= 0
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : 'text-red-600 dark:text-red-400'
+                            ? 'text-emerald-700'
+                            : 'text-red-600'
                         )}
                       >
                         {formatPct(liveSummary.day_change_percent)}
@@ -396,8 +400,8 @@ export default function TodayPage() {
                         className={cn(
                           'text-xl font-bold tabular-nums sm:text-2xl',
                           nifty.changePercent >= 0
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : 'text-red-600 dark:text-red-400'
+                            ? 'text-emerald-700'
+                            : 'text-red-600'
                         )}
                       >
                         {formatPct(nifty.changePercent)}
@@ -416,8 +420,8 @@ export default function TodayPage() {
                         className={cn(
                           'text-xl font-bold tabular-nums sm:text-2xl',
                           sensex.changePercent >= 0
-                            ? 'text-emerald-700 dark:text-emerald-400'
-                            : 'text-red-600 dark:text-red-400'
+                            ? 'text-emerald-700'
+                            : 'text-red-600'
                         )}
                       >
                         {formatPct(sensex.changePercent)}
@@ -434,8 +438,8 @@ export default function TodayPage() {
                 className={cn(
                   'flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs sm:text-sm',
                   vsNifty >= 0
-                    ? 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
-                    : 'bg-red-500/10 text-red-800 dark:text-red-300'
+                    ? 'bg-emerald-500/10 text-emerald-800'
+                    : 'bg-red-500/10 text-red-800'
                 )}
               >
                 <SparklesIcon className="size-4 shrink-0" />
@@ -489,7 +493,7 @@ export default function TodayPage() {
                   className={cn(
                     'rounded-lg border px-2.5 py-2 text-[11px] leading-snug',
                     risk.maxW > 45 || risk.top3Sum > 75
-                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-950 dark:text-amber-200'
+                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-950'
                       : 'border-border bg-muted/30 text-muted-foreground'
                   )}
                 >
@@ -600,8 +604,8 @@ export default function TodayPage() {
                           className={cn(
                             'font-mono text-sm font-semibold tabular-nums',
                             h.day_change >= 0
-                              ? 'text-emerald-700 dark:text-emerald-400'
-                              : 'text-red-600 dark:text-red-400'
+                              ? 'text-emerald-700'
+                              : 'text-red-600'
                           )}
                         >
                           {formatInr(h.day_change)}

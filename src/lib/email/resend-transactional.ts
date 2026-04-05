@@ -8,7 +8,7 @@ const DEFAULT_FROM = 'onboarding@resend.dev';
  *
  * Env:
  * - `RESEND_API_KEY` (required) — create at resend.com; never commit or paste keys in source.
- * - `EMAIL_FROM` (optional) — e.g. `StockPulse <mail@yourdomain.com>` after domain verify; defaults to `onboarding@resend.dev`.
+ * - `EMAIL_FROM` (optional) — e.g. `StockPulse <hello@stock-pulse.in>` after domain verify; defaults to `onboarding@resend.dev`.
  */
 export function isResendConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY?.trim());

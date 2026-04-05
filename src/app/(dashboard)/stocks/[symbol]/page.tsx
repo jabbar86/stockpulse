@@ -27,6 +27,8 @@ import { DashboardLink } from '@/components/dashboard/dashboard-link';
 import { useLivePrices } from '@/hooks/use-live-prices';
 import { StockChartSkeleton } from '@/components/stocks/stock-chart-skeleton';
 import { StockAnalysisPageSkeleton } from '@/components/stocks/stock-page-skeleton';
+import { ComparisonChart } from '@/components/stocks/comparison-chart';
+import { FibonacciOverlay } from '@/components/stocks/fibonacci-overlay';
 import { cn } from '@/lib/utils';
 
 const CandlestickChart = dynamic(() => import('@/components/stocks/candlestick-chart'), {
@@ -537,6 +539,16 @@ export default function StockAnalysisPage() {
               description={`Middle: ${analysis.technical.bollingerBands.middle.toFixed(2)}`}
             />
 
+            {/* ATR */}
+            {analysis.technical.atr !== undefined && (
+              <IndicatorCard
+                title="ATR (14)"
+                value={analysis.technical.atr}
+                signal="neutral"
+                description="Average True Range — volatility measure"
+              />
+            )}
+
             <Card size="sm" className="border-border shadow-none">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -607,10 +619,35 @@ export default function StockAnalysisPage() {
                     {analysis.technical.ema.ema26.toFixed(2)}
                   </p>
                 </div>
+                {analysis.technical.vwap !== undefined && (
+                  <div className="rounded-lg border p-3 text-center bg-primary/5">
+                    <p className="text-xs text-muted-foreground">VWAP</p>
+                    <p className="text-lg font-semibold">
+                      {analysis.technical.vwap.toFixed(2)}
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Fibonacci Retracement */}
+          {analysis.technical.fibonacci && stockQuote && (
+            <Card className="border-border shadow-none">
+              <CardHeader>
+                <CardTitle className="text-base font-medium">Fibonacci Retracement</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FibonacciOverlay data={historicalData} currentPrice={stockQuote.price} />
+              </CardContent>
+            </Card>
+          )}
         </div>
+      )}
+
+      {/* Performance Comparison Chart */}
+      {analysis && (
+        <ComparisonChart symbol={symbol} period="3mo" />
       )}
 
       <div className="space-y-2">

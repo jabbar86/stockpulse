@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { TooltipProvider } from '@/components/ui/tooltip';
+
 import { JsonLdSite } from '@/components/seo/json-ld';
 import { siteUrl, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site-config';
 import './globals.css';
