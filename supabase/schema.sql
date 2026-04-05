@@ -30,9 +30,6 @@ $$;
 
 alter function public.handle_new_user() owner to postgres;
 
-revoke all on function public.handle_new_user() from public;
-grant execute on function public.handle_new_user() to postgres;
-
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();

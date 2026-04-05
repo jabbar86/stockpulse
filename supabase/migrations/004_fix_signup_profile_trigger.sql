@@ -1,6 +1,7 @@
 -- Fix signup: "Database error saving new user"
 -- Cause: handle_new_user() insert into public.profiles was blocked by RLS or unsafe search_path.
--- Idempotent: CREATE OR REPLACE function; ALTER/REVOKE/GRANT safe to repeat.
+-- Idempotent: CREATE OR REPLACE function; ALTER OWNER safe to repeat.
+-- Do not REVOKE EXECUTE FROM PUBLIC — hosted Supabase Auth can require it for the signup trigger chain.
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -20,9 +21,6 @@ end;
 $$;
 
 alter function public.handle_new_user() owner to postgres;
-
-revoke all on function public.handle_new_user() from public;
-grant execute on function public.handle_new_user() to postgres;
 
 -- Optional: remove profile rows with no auth user (fixes unique(email) after bad deletes)
 -- delete from public.profiles p
