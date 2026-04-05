@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, EyeIcon, EyeOffIcon, MailIcon, AtSignIcon, LockIcon, CheckCircle2Icon } from 'lucide-react';
+import { friendlySupabaseAuthMessage } from '@/lib/auth/supabase-auth-errors';
 
 function LoginForm() {
   const router = useRouter();
@@ -59,7 +60,7 @@ function LoginForm() {
           'Invalid email or password. If you don\'t have an account, please sign up first.'
         );
       } else {
-        setError(authError.message);
+        setError(friendlySupabaseAuthMessage(authError.message));
       }
       setLoading(false);
     } else {
@@ -80,7 +81,7 @@ function LoginForm() {
     });
     setResending(false);
     if (resendError) {
-      setError(resendError.message);
+      setError(friendlySupabaseAuthMessage(resendError.message));
     } else {
       setResent(true);
     }

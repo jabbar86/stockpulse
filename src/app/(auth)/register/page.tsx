@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, EyeIcon, EyeOffIcon, CheckIcon, MailIcon, UserIcon, AtSignIcon, LockIcon } from 'lucide-react';
+import { friendlySupabaseAuthMessage } from '@/lib/auth/supabase-auth-errors';
 
 export default function RegisterPage() {
   const [name, setName] = useState('');
@@ -40,7 +41,7 @@ export default function RegisterPage() {
       });
 
       if (authError) {
-        setError(authError.message);
+        setError(friendlySupabaseAuthMessage(authError.message));
         setLoading(false);
         return;
       }
@@ -100,7 +101,7 @@ export default function RegisterPage() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <div className="bg-destructive/10 text-destructive text-sm p-3.5 rounded-xl text-center font-medium">
+          <div className="rounded-xl bg-destructive/10 p-3.5 text-left text-sm font-medium leading-relaxed text-destructive">
             {error}
           </div>
         )}
