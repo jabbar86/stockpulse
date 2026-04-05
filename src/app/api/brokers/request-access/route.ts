@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { isResendConfigured, sendTransactionalEmail } from '@/lib/email/resend-transactional';
 
+/** Premium/broker access requests: inbox unless `ADMIN_NOTIFY_EMAIL` overrides. */
+const DEFAULT_PREMIUM_NOTIFY_EMAIL = 'memonjabbar2@gmail.com';
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -38,8 +41,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to submit request' }, { status: 500 });
     }
 
-    const adminTo = process.env.ADMIN_NOTIFY_EMAIL?.trim();
-    if (adminTo && isResendConfigured()) {
+    const adminTo =
+      process.env.ADMIN_NOTIFY_EMAIL?.trim() || DEFAULT_PREMIUM_NOTIFY_EMAIL;
+    if (isResendConfigured()) {
       const html = `
             <h2>New Premium Access Request</h2>
             <table style="border-collapse:collapse;width:100%;max-width:500px;">
