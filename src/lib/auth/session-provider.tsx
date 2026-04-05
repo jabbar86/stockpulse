@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
   const lastUserIdRef = useRef<string | null>(null);
+  const profileEnsureTriedRef = useRef(new Set<string>());
 
   const handleSignOut = useCallback(async () => {
     const uid = lastUserIdRef.current;
@@ -94,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (currentUser) {
         fetchProfile(currentUser.id);
       } else {
+        profileEnsureTriedRef.current.clear();
         setProfile(null);
       }
     });
@@ -127,17 +129,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, handleSignOut]);
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase
+    let { data } = await supabase
       .from('profiles')
       .select('name, email')
       .eq('id', userId)
       .maybeSingle();
 
+    if (!data && !profileEnsureTriedRef.current.has(userId)) {
+      profileEnsureTriedRef.current.add(userId);
+      try {
+        const res = await fetch('/api/profile/ensure', {
+          method: 'POST',
+          credentials: 'same-origin',
+        });
+        if (res.ok) {
+          const retry = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('id', userId)
+            .maybeSingle();
+          data = retry.data;
+        }
+      } catch {
+        /* ignore network errors; fall back to auth metadata */
+      }
+    }
+
     if (data) {
       setProfile(data);
     } else {
-      // Profile not created yet (trigger may be delayed) — use auth metadata as fallback
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser();
       if (authUser) {
         setProfile({
           name: authUser.user_metadata?.name || '',

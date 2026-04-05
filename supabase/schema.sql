@@ -14,16 +14,31 @@ create table if not exists profiles (
   updated_at timestamptz default now()
 );
 
--- Auto-create profile on user signup (security definer + search_path so RLS does not block insert)
+-- Auto-create profile on user signup (Supabase-recommended search_path + orphan cleanup; see migration 007)
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = ''
 as $$
 begin
+  if new.email is not null then
+    delete from public.profiles p
+    where p.email = new.email
+      and not exists (select 1 from auth.users u where u.id = p.id);
+  end if;
+
   insert into public.profiles (id, email, name)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', ''));
+  values (
+    new.id,
+    coalesce(nullif(trim(new.email), ''), new.id::text || '@signup.local'),
+    coalesce(new.raw_user_meta_data->>'name', '')
+  )
+  on conflict (id) do update set
+    email = excluded.email,
+    name = excluded.name,
+    updated_at = now();
+
   return new;
 end;
 $$;

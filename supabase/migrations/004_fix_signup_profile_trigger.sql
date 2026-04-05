@@ -1,7 +1,5 @@
--- Fix signup: "Database error saving new user"
--- Cause: handle_new_user() insert into public.profiles was blocked by RLS or unsafe search_path.
--- Idempotent: CREATE OR REPLACE function; ALTER OWNER safe to repeat.
--- Do not REVOKE EXECUTE FROM PUBLIC — hosted Supabase Auth can require it for the signup trigger chain.
+-- Fix signup: "Database error saving new user" — baseline trigger hardening.
+-- Idempotent. Full canonical behaviour (search_path '', orphans, upsert) is in 007.
 
 create or replace function public.handle_new_user()
 returns trigger
