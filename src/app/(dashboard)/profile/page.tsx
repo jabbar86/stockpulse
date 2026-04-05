@@ -51,7 +51,7 @@ export default function ProfilePage() {
     let cancelled = false;
     async function fetchProfile() {
       try {
-        const res = await fetch('/api/profile', { cache: 'no-store' });
+        const res = await fetch('/api/profile');
         if (cancelled) return;
         if (res.ok) {
           const data = await res.json();

@@ -1,63 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-// GET /api/profile - fetch current user profile
+const cacheHeaders = {
+  'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+};
+
+// GET /api/profile — single RPC (see migration 009) to avoid 4 round-trips to PostgREST
 export async function GET() {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase.rpc('profile_api_payload');
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (error) {
+      const lower = (error.message || '').toLowerCase();
+      if (
+        lower.includes('jwt') ||
+        lower.includes('permission denied') ||
+        lower.includes('not authorized')
+      ) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      console.error('GET /api/profile rpc', error);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 
-    const uid = user.id;
-
-    const [
-      { data: profile, error: profileError },
-      { count: totalAnalyses },
-      { count: holdingsCount },
-      { count: brokerCount },
-    ] = await Promise.all([
-      supabase
-        .from('profiles')
-        .select('id, name, email, is_premium, max_ai_analyses, created_at')
-        .eq('id', uid)
-        .single(),
-      supabase
-        .from('analysis_history')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', uid)
-        .eq('type', 'ai')
-        .eq('cached', false),
-      supabase
-        .from('holdings')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', uid),
-      supabase
-        .from('broker_connections')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', uid)
-        .eq('status', 'connected'),
-    ]);
-
-    if (profileError || !profile) {
+    if (!data) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    return NextResponse.json(
-      {
-        ...profile,
-        ai_analyses_used: totalAnalyses ?? 0,
-        holdings_count: holdingsCount ?? 0,
-        broker_connections: brokerCount ?? 0,
-      },
-      {
-        headers: {
-          'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
-        },
-      }
-    );
+    return NextResponse.json(data, { headers: cacheHeaders });
   } catch (error) {
     console.error('Profile fetch error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -68,7 +39,9 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

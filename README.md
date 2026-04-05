@@ -11,6 +11,8 @@ Migrations run automatically **before each production build** when `DATABASE_URL
 
 Tracked in table `public.schema_migrations` — each file runs at most once per database.
 
+**009** adds `profile_api_payload()` so `GET /api/profile` uses **one** database call instead of four parallel PostgREST requests (faster on production).
+
 To skip migrations for a single build: `SKIP_DB_MIGRATE=1 npm run build`.
 
 ### Signup: “Database error saving new user”
