@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import AuthSessionProvider from '@/lib/auth/session-provider';
 import Sidebar from '@/components/dashboard/sidebar';
 import Header from '@/components/dashboard/header';
@@ -8,6 +9,11 @@ import { NavigationPendingProvider } from '@/components/dashboard/navigation-pen
 import { Toaster } from '@/components/ui/sonner';
 import { CopilotPanel } from '@/components/ai/copilot-panel';
 import { MarketRiskDisclaimer } from '@/components/legal/market-risk-disclaimer';
+
+/** Logged-in app chrome should not compete with marketing pages in search results. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function DashboardLayout({
   children,

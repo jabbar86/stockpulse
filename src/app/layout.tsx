@@ -3,7 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 import { JsonLdSite } from '@/components/seo/json-ld';
-import { siteUrl, SITE_NAME, SITE_TAGLINE } from '@/lib/seo/site-config';
+import { siteUrl, SITE_NAME, SITE_TAGLINE, SEO_KEYWORDS } from '@/lib/seo/site-config';
 import './globals.css';
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -19,6 +19,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
+const twitterSite = process.env.NEXT_PUBLIC_TWITTER_SITE?.trim();
+const twitterCreator = process.env.NEXT_PUBLIC_TWITTER_CREATOR?.trim();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -29,23 +31,14 @@ export const metadata: Metadata = {
   description: SITE_TAGLINE,
   applicationName: SITE_NAME,
   category: 'finance',
-  keywords: [
-    'Indian stocks',
-    'NSE',
-    'BSE',
-    'Nifty 50',
-    'Sensex',
-    'stock analysis',
-    'portfolio tracker',
-    'mutual funds India',
-    'AI stock recommendations',
-    'technical analysis',
-    'broker integration India',
-    'Upstox',
-    'Zerodha',
-  ],
+  keywords: [...SEO_KEYWORDS],
   authors: [{ name: SITE_NAME, url: siteUrl() }],
   creator: SITE_NAME,
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: 'default',
+  },
   openGraph: {
     type: 'website',
     locale: 'en_IN',
@@ -67,6 +60,8 @@ export const metadata: Metadata = {
     title: `${SITE_NAME} — Indian markets & portfolio AI`,
     description: SITE_TAGLINE,
     images: ['/opengraph-image'],
+    ...(twitterSite ? { site: twitterSite } : {}),
+    ...(twitterCreator ? { creator: twitterCreator } : {}),
   },
   robots: {
     index: true,

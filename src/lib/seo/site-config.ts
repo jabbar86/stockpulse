@@ -8,3 +8,32 @@ export const SITE_NAME = 'StockPulse';
 
 export const SITE_TAGLINE =
   'AI-powered stock analysis, portfolio tracking, and Indian market insights for NSE & BSE investors.';
+
+/** Primary keywords for `<meta name="keywords">` and internal reuse. */
+export const SEO_KEYWORDS = [
+  'Indian stocks',
+  'NSE',
+  'BSE',
+  'Nifty 50',
+  'Bank Nifty',
+  'Sensex',
+  'stock analysis India',
+  'portfolio tracker India',
+  'equity research India',
+  'mutual funds India',
+  'AI stock analysis',
+  'technical analysis stocks',
+  'fundamental analysis',
+  'broker integration India',
+  'Upstox',
+  'Zerodha',
+  'Groww',
+  'Dhan',
+  'Angel One',
+  '5paisa',
+  'Fyers',
+  'ICICI Direct',
+  'Kotak Securities',
+  'intraday trading India',
+  'stock screener India',
+] as const;

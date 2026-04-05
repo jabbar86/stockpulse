@@ -3,11 +3,28 @@ import Link from 'next/link';
 import { LineChart } from 'lucide-react';
 import { siteUrl, SITE_NAME } from '@/lib/seo/site-config';
 
+const base = siteUrl();
+const canonical = `${base}/terms`;
+const desc = `Terms for using ${SITE_NAME} — educational analytics tool for Indian markets.`;
+
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: `Terms for using ${SITE_NAME} — educational analytics tool for Indian markets.`,
-  alternates: { canonical: `${siteUrl()}/terms` },
+  description: desc,
+  alternates: { canonical },
   robots: { index: true, follow: true },
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    url: canonical,
+    title: `Terms of Service | ${SITE_NAME}`,
+    description: desc,
+    siteName: SITE_NAME,
+  },
+  twitter: {
+    card: 'summary',
+    title: `Terms of Service | ${SITE_NAME}`,
+    description: desc,
+  },
 };
 
 export default function TermsOfServicePage() {

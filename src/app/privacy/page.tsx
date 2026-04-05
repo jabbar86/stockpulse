@@ -3,11 +3,28 @@ import Link from 'next/link';
 import { LineChart } from 'lucide-react';
 import { siteUrl, SITE_NAME } from '@/lib/seo/site-config';
 
+const base = siteUrl();
+const canonical = `${base}/privacy`;
+const desc = `How ${SITE_NAME} collects and uses data for analytics and to run the service.`;
+
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: `How ${SITE_NAME} collects and uses data for analytics and to run the service.`,
-  alternates: { canonical: `${siteUrl()}/privacy` },
+  description: desc,
+  alternates: { canonical },
   robots: { index: true, follow: true },
+  openGraph: {
+    type: 'website',
+    locale: 'en_IN',
+    url: canonical,
+    title: `Privacy Policy | ${SITE_NAME}`,
+    description: desc,
+    siteName: SITE_NAME,
+  },
+  twitter: {
+    card: 'summary',
+    title: `Privacy Policy | ${SITE_NAME}`,
+    description: desc,
+  },
 };
 
 export default function PrivacyPolicyPage() {
