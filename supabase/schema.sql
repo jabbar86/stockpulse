@@ -14,15 +14,24 @@ create table if not exists profiles (
   updated_at timestamptz default now()
 );
 
--- Auto-create profile on user signup
+-- Auto-create profile on user signup (security definer + search_path so RLS does not block insert)
 create or replace function public.handle_new_user()
-returns trigger as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
 begin
   insert into public.profiles (id, email, name)
   values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', ''));
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
+
+alter function public.handle_new_user() owner to postgres;
+
+revoke all on function public.handle_new_user() from public;
+grant execute on function public.handle_new_user() to postgres;
 
 create trigger on_auth_user_created
   after insert on auth.users

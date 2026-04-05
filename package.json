@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/run-migrations.mjs",
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
@@ -12,7 +13,7 @@
     "lint": "eslint",
     "db:setup": "node --env-file=.env.local scripts/setup-db.mjs",
     "db:add-support": "node --env-file=.env.local scripts/add-support-table.mjs",
-    "db:migrate": "npm run db:setup || true && npm run db:add-support"
+    "db:migrate": "node scripts/run-migrations.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
