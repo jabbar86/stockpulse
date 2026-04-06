@@ -168,7 +168,7 @@ export async function POST(
     if (msg.includes('No AI provider available')) {
       return NextResponse.json(
         {
-          error: msg,
+          error: 'AI service is not configured.',
           code: 'NO_AI_PROVIDER' as const,
         },
         { status: 503 }

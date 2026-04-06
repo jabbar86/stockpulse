@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import type { AIAnalysis } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,16 +13,6 @@ import {
   TargetIcon,
   Loader2Icon,
 } from 'lucide-react';
-
-type AiStatusPayload = {
-  ok: boolean;
-  stock_analysis: {
-    provider: string;
-    model: string;
-    label: string;
-  } | null;
-  message?: string;
-};
 
 interface AIAnalysisCardProps {
   analysis: AIAnalysis | null;
@@ -47,23 +36,6 @@ function getRecommendationConfig(recommendation: AIAnalysis['recommendation']) {
 }
 
 export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnalysisCardProps) {
-  const [aiStatus, setAiStatus] = useState<AiStatusPayload | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/ai/status')
-      .then((r) => r.json())
-      .then((j: AiStatusPayload) => {
-        if (!cancelled) setAiStatus(j);
-      })
-      .catch(() => {
-        if (!cancelled) setAiStatus({ ok: false, stock_analysis: null });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   if (!analysis && !loading) {
     return (
       <Card className="border-dashed border-border shadow-none">
@@ -72,20 +44,6 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
           <div className="max-w-md space-y-1">
             <p className="font-medium">Run AI analysis</p>
             <p className="text-sm text-muted-foreground">Recommendation, factors, risks, and levels.</p>
-            {aiStatus?.ok && aiStatus.stock_analysis ? (
-              <p className="text-xs text-muted-foreground pt-1">
-                Server uses <span className="font-medium text-foreground">{aiStatus.stock_analysis.label}</span>
-                {aiStatus.stock_analysis.provider === 'groq' || aiStatus.stock_analysis.provider === 'ollama'
-                  ? ' (free / local-friendly).'
-                  : '.'}
-              </p>
-            ) : aiStatus && !aiStatus.ok ? (
-              <p className="text-xs text-amber-700 dark:text-amber-500/90 pt-1">
-                No AI provider configured. Add{' '}
-                <span className="font-medium">GROQ_API_KEY</span> (free tier) or{' '}
-                <span className="font-medium">Ollama</span> — see <code className="text-[10px]">.env.example</code>.
-              </p>
-            ) : null}
           </div>
           <Button variant="outline" onClick={onAnalyze} className="gap-2">
             <SparklesIcon className="size-4" />
@@ -133,11 +91,6 @@ export default function AIAnalysisCard({ analysis, loading, onAnalyze }: AIAnaly
           <div className="flex flex-wrap items-center gap-2">
             <Badge className={recConfig.className}>{recConfig.label}</Badge>
             <Badge variant="outline">{analysis.confidence}% confidence</Badge>
-            {analysis.source?.label && (
-              <Badge variant="secondary" className="font-normal text-muted-foreground">
-                {analysis.source.label}
-              </Badge>
-            )}
           </div>
         </div>
       </CardHeader>

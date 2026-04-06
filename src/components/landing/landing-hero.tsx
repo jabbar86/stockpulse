@@ -30,7 +30,7 @@ export function LandingHero() {
                 className="gap-1.5 px-3 py-1 text-xs font-medium"
               >
                 <Sparkles className="size-3 text-primary" />
-                Powered by Claude, GPT & Gemini
+                AI-powered insights
               </Badge>
             </div>
           </HeroEnter>
@@ -47,8 +47,8 @@ export function LandingHero() {
           <HeroEnter step={2}>
             <p className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
               AI-powered analysis, real-time data, and portfolio tracking for
-              NSE & BSE. Connect your broker, add holdings, and let three AI
-              models guide your next move.
+              NSE & BSE. Connect your broker, add holdings, and get clear
+              guidance for your next move.
             </p>
           </HeroEnter>
 

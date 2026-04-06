@@ -201,9 +201,8 @@ export default function StockAnalysisPage() {
         return;
       }
       if (res.status === 503 && (data as { code?: string }).code === 'NO_AI_PROVIDER') {
-        toast.error('AI not configured on the server', {
-          description:
-            'Add GROQ_API_KEY (free at console.groq.com) or run Ollama. See .env.example.',
+        toast.error('AI is unavailable', {
+          description: 'Please try again later or contact support if this continues.',
         });
         return;
       }

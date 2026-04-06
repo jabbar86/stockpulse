@@ -1,11 +1,12 @@
 import type { AIModel, AIProvider, AITaskType, ModelConfig } from './types';
 
+/** Internal routing only; labels are not shown to end users. */
 export const MODEL_REGISTRY: Record<AIModel, { provider: AIProvider; label: string }> = {
-  'llama3.2-ollama': { provider: 'ollama', label: 'Ollama (local)' },
-  'llama-3.1-8b-groq': { provider: 'groq', label: 'Groq Llama (free tier)' },
-  'gemini-2.0-flash': { provider: 'google', label: 'Gemini 2.0 Flash' },
-  'gpt-4o-mini': { provider: 'openai', label: 'GPT-4o Mini' },
-  'claude-sonnet-4-20250514': { provider: 'anthropic', label: 'Claude Sonnet 4' },
+  'llama3.2-ollama': { provider: 'ollama', label: 'Local' },
+  'llama-3.1-8b-groq': { provider: 'groq', label: 'Cloud' },
+  'gemini-2.0-flash': { provider: 'google', label: 'Cloud' },
+  'gpt-4o-mini': { provider: 'openai', label: 'Cloud' },
+  'claude-sonnet-4-20250514': { provider: 'anthropic', label: 'Cloud' },
 };
 
 /** Task routing table: primary model + fallback chain */
@@ -110,7 +111,5 @@ export function resolveModel(task: AITaskType): ModelConfig {
     }
   }
 
-  throw new Error(
-    `No AI provider available for task "${task}". For free / open-weight options: set OLLAMA_ENABLED=true (install Ollama locally) and/or GROQ_API_KEY (https://console.groq.com). Or set GOOGLE_AI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY.`
-  );
+  throw new Error('No AI provider available');
 }

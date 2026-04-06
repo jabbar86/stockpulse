@@ -56,7 +56,7 @@ export default function AuthLayout({
           <div className="flex flex-col gap-3 pt-2">
             {[
               { Icon: TrendingUp, text: '1,800+ NSE & BSE stocks with live prices' },
-              { Icon: Sparkles, text: 'Multi-model AI analysis (Claude, GPT, Gemini)' },
+              { Icon: Sparkles, text: 'Multi-model AI analysis & signals' },
               { Icon: BarChart3, text: 'Technical indicators with buy/sell signals' },
               { Icon: Shield, text: 'Secure Upstox & Angel One integration' },
             ].map(({ Icon, text }) => (

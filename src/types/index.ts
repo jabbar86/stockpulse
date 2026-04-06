@@ -157,12 +157,6 @@ export interface AIAnalysis {
     target_6m?: number;
   };
   sector_outlook?: string;
-  /** Set server-side after a successful run (not part of LLM JSON). */
-  source?: {
-    provider: string;
-    model: string;
-    label: string;
-  };
 }
 
 export interface CombinedAnalysis {

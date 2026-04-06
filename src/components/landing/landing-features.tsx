@@ -203,9 +203,9 @@ const FEATURES = [
   },
   {
     icon: Brain,
-    title: 'Three AI models. One clear recommendation.',
+    title: 'AI analysis. One clear recommendation.',
     description:
-      'Claude, GPT, and Gemini each analyze fundamentals, technicals, and market context. Compare their views or deep-dive into each.',
+      'Fundamentals, technicals, and market context combined into a single actionable view—no jargon, no guesswork.',
     Illustration: IllustrationAI,
   },
   {
@@ -248,8 +248,8 @@ export function LandingFeatures() {
               Everything you need to invest smarter
             </h2>
             <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-              Tools for tracking, analyzing, and deciding — powered by three AI
-              models.
+              Tools for tracking, analyzing, and deciding — with AI woven through
+              the experience.
             </p>
           </div>
         </Reveal>

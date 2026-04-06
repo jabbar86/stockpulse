@@ -5,7 +5,7 @@ import { useCountUp } from './use-count-up';
 
 const STATS = [
   { target: 1800, suffix: '+', label: 'NSE & BSE stocks', highlight: false },
-  { target: 3, suffix: '', label: 'AI models analyzing', highlight: false },
+  { target: 3, suffix: '', label: 'Analysis dimensions', highlight: false },
   { target: 4, suffix: '+', label: 'Broker integrations', highlight: false },
   { target: 0, suffix: '', label: 'Cost to start', prefix: '\u20B9', highlight: true },
 ] as const;

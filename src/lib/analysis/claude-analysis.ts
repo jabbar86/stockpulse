@@ -1,5 +1,4 @@
 import { route } from '@/lib/ai/router';
-import { MODEL_REGISTRY } from '@/lib/ai/models';
 import { getCachedAnalysis, setCachedAnalysis } from '@/lib/ai/cache';
 import type {
   StockQuote,
@@ -70,16 +69,7 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
   const cached = await getCachedAnalysis(symbol, prompt);
   if (cached) {
     try {
-      const parsed = JSON.parse(cached.result) as AIAnalysis;
-      if (cached.model && MODEL_REGISTRY[cached.model as keyof typeof MODEL_REGISTRY]) {
-        const reg = MODEL_REGISTRY[cached.model as keyof typeof MODEL_REGISTRY];
-        parsed.source = {
-          provider: reg.provider,
-          model: cached.model,
-          label: reg.label,
-        };
-      }
-      return parsed;
+      return JSON.parse(cached.result) as AIAnalysis;
     } catch {
       // Invalid cache entry, continue to fresh analysis
     }
@@ -108,17 +98,9 @@ Respond ONLY with a valid JSON object (no markdown, no code fences) matching thi
       throw new Error('Invalid response structure from AI');
     }
 
-    // Cache the result (LLM JSON only; `source` is added for API consumers)
     await setCachedAnalysis(symbol, prompt, JSON.stringify(parsed), response.model);
 
-    return {
-      ...parsed,
-      source: {
-        provider: response.provider,
-        model: response.model,
-        label: MODEL_REGISTRY[response.model].label,
-      },
-    };
+    return parsed;
   } catch (error) {
     if (error instanceof SyntaxError) {
       throw new Error('Failed to parse AI response as JSON');
