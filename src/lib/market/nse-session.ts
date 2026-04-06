@@ -52,11 +52,14 @@ function getISTParts(date: Date): {
   });
   const parts = dtf.formatToParts(date);
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  let hour = get('hour');
+  // Some Intl locales emit 24 for midnight; normalize so session window math is correct.
+  if (hour === 24) hour = 0;
   return {
     year: get('year'),
     month: get('month'),
     day: get('day'),
-    hour: get('hour'),
+    hour,
     minute: get('minute'),
   };
 }

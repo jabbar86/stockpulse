@@ -310,7 +310,13 @@ export default function MarketPage() {
   const sectorScrollRef = useRef<HTMLDivElement>(null);
 
   // Live price streaming
-  const { getPrice, connected: liveConnected, lastUpdate: liveLastUpdate, marketStatus } = useLivePrices({ enabled: autoRefresh });
+  const {
+    getPrice,
+    connected: liveConnected,
+    lastUpdate: liveLastUpdate,
+    marketStatus,
+    quotesReady: liveQuotesReady,
+  } = useLivePrices({ enabled: autoRefresh });
 
   const fetchMarketData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -417,7 +423,12 @@ export default function MarketPage() {
         <div className="flex items-center gap-2">
           <h1 className="text-lg sm:text-3xl font-bold">Market Overview</h1>
           {autoRefresh && (
-            marketStatus.isOpen ? (
+            !liveQuotesReady ? (
+              <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full bg-muted/80 text-muted-foreground">
+                <span className="size-1.5 rounded-full bg-muted-foreground/50 animate-pulse" />
+                <span className="hidden sm:inline">Session…</span>
+              </span>
+            ) : marketStatus.isOpen ? (
               <span className={`inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full ${
                 liveConnected
                   ? 'bg-green-500/10 text-green-600'
@@ -439,7 +450,7 @@ export default function MarketPage() {
             ) : (
               <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-600">
                 <span className="size-1.5 rounded-full bg-orange-500" />
-                <span className="hidden sm:inline">{marketStatus.message || 'Market Closed'}</span>
+                <span className="hidden sm:inline">{marketStatus.message || 'Market closed'}</span>
                 <span className="sm:hidden">Closed</span>
               </span>
             )

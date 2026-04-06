@@ -29,6 +29,9 @@ interface UseLivePricesOptions {
 const POLL_INTERVAL_OPEN = 10_000;   // 10s during market hours
 const POLL_INTERVAL_CLOSED = 300_000; // 5 min after hours
 
+/** Sentinel: fetch `/api/market/prices` with no `symbols` param (server default universe). */
+const DEFAULT_SYMBOLS_KEY = '__default__';
+
 export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions = {}) {
   const [prices, setPrices] = useState<Map<string, LivePrice>>(new Map());
   const [connected, setConnected] = useState(false);
@@ -40,14 +43,15 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const symbolsKeyRef = useRef('');
 
-  // Stable key for symbols to avoid unnecessary re-renders
-  const symbolsKey = symbols ? symbols.join(',') : '';
+  // Stable key: omitting `symbols` (e.g. Market Overview) must still poll so `marketStatus` updates.
+  const symbolsKey =
+    symbols !== undefined && symbols.length > 0 ? symbols.join(',') : DEFAULT_SYMBOLS_KEY;
 
   const doFetch = useCallback(async (syms: string) => {
     try {
       let url = '/api/market/prices';
-      if (syms) {
-        url += `?symbols=${syms}`;
+      if (syms !== DEFAULT_SYMBOLS_KEY) {
+        url += `?symbols=${encodeURIComponent(syms)}`;
       }
 
       const res = await fetch(url);
@@ -89,7 +93,7 @@ export function useLivePrices({ symbols, enabled = true }: UseLivePricesOptions 
   }, []);
 
   useEffect(() => {
-    if (!enabled || !symbolsKey) {
+    if (!enabled) {
       setQuotesReady(false);
       return;
     }
