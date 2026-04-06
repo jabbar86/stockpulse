@@ -13,6 +13,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/market': 'Market',
   '/portfolio': 'Portfolio',
+  '/algo': 'AI Algo',
   '/stocks': 'Stocks',
   '/brokers': 'Connect',
   '/profile': 'Profile',

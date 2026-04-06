@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/daily-digest",
       "schedule": "30 1 * * *"
+    },
+    {
+      "path": "/api/cron/algo-paper",
+      "schedule": "30 4 * * 1-5"
     }
   ]
 }

@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { RiskDashboard } from '@/components/portfolio/risk-dashboard';
 import { CorrelationMatrix } from '@/components/portfolio/correlation-matrix';
+import { PortfolioSignalsCard } from '@/components/portfolio/portfolio-signals-card';
 import { calculateRiskMetrics } from '@/lib/analysis/risk-scoring';
 
 function formatCurrency(value: number): string {
@@ -284,6 +285,11 @@ export default function PortfolioPage() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Timeframe signals (intraday / swing / long term) + live LTP */}
+      {!loading && liveHoldings.length > 0 && (
+        <PortfolioSignalsCard symbols={holdingSymbols} getPrice={getPrice} />
       )}
 
       {/* Holdings */}

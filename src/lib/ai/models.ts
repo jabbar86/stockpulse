@@ -34,6 +34,17 @@ const TASK_ROUTING: Record<AITaskType, { models: AIModel[]; maxTokens: number; t
     maxTokens: 1024,
     temperature: 0.3,
   },
+  portfolio_signals: {
+    models: [
+      'llama3.2-ollama',
+      'llama-3.1-8b-groq',
+      'gemini-2.0-flash',
+      'gpt-4o-mini',
+      'claude-sonnet-4-20250514',
+    ],
+    maxTokens: 4096,
+    temperature: 0.25,
+  },
   chat_response: {
     models: [
       'llama3.2-ollama',
@@ -98,6 +109,16 @@ export function isProviderAvailable(provider: AIProvider): boolean {
     case 'google':
       return Boolean(process.env.GOOGLE_AI_API_KEY?.trim());
   }
+}
+
+/** True if at least one AI provider is configured (env keys / Ollama). */
+export function hasAnyAiProvider(): boolean {
+  const models = Object.keys(MODEL_REGISTRY) as AIModel[];
+  for (const model of models) {
+    const { provider } = MODEL_REGISTRY[model];
+    if (isProviderAvailable(provider)) return true;
+  }
+  return false;
 }
 
 /** Resolve the best available model config for a given task type */

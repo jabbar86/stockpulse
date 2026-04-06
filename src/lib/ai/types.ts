@@ -10,6 +10,7 @@ export type AIModel =
 export type AITaskType =
   | 'stock_analysis'
   | 'portfolio_analysis'
+  | 'portfolio_signals'
   | 'chat_response'
   | 'morning_brief'
   | 'quick_summary'

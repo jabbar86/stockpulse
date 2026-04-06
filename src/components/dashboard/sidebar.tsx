@@ -17,6 +17,7 @@ import {
   CalendarDays,
   SearchIcon,
   SettingsIcon,
+  BotIcon,
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -26,6 +27,7 @@ const navItems = [
   { href: '/market', label: 'Markets', icon: BarChart3 },
   { href: '/stocks', label: 'Stocks', icon: TrendingUp },
   { href: '/portfolio', label: 'Portfolio', icon: Briefcase },
+  { href: '/algo', label: 'AI Algo', icon: BotIcon },
   { href: '/mutual-funds', label: 'Mutual Funds', icon: Banknote },
   { href: '/news', label: 'News', icon: Newspaper },
   { href: '/brokers', label: 'Connect', icon: Link2 },

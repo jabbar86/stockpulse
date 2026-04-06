@@ -211,6 +211,52 @@ export interface StockRecommendation {
   generated_at: string;
 }
 
+/** Rule-engine output per holding (portfolio signals API). */
+export interface PortfolioHoldingSignals {
+  symbol: string;
+  name: string;
+  intraday: StockRecommendation | null;
+  swing: StockRecommendation | null;
+  long_term: StockRecommendation | null;
+  common: StockRecommendation | null;
+}
+
+/** AI synthesis for a single timeframe (portfolio signals). */
+export interface PortfolioSignalAIForecast {
+  action: 'buy' | 'sell' | 'hold' | 'exit';
+  conviction: number;
+  rationale: string;
+}
+
+export interface PortfolioSignalAIHoldingRow {
+  symbol: string;
+  intraday: PortfolioSignalAIForecast | null;
+  swing: PortfolioSignalAIForecast | null;
+  long_term: PortfolioSignalAIForecast | null;
+  common: PortfolioSignalAIForecast | null;
+}
+
+export interface PortfolioSignalsAIResult {
+  portfolio_note: string;
+  holdings: PortfolioSignalAIHoldingRow[];
+  model?: string;
+}
+
+/** AI + rules — simulated algo intent (paper trading; not a live order). */
+export interface AlgoTradeIntent {
+  symbol: string;
+  name: string;
+  side: 'buy' | 'sell' | 'hold';
+  quantity: number;
+  reference_price: number;
+  stop_loss?: number;
+  take_profit?: number;
+  timeframe: string;
+  conviction: number;
+  rationale: string;
+  source: 'consensus' | 'rules' | 'ai';
+}
+
 // Mutual Funds (India)
 export interface MutualFundSearchResult {
   schemeCode: number;
