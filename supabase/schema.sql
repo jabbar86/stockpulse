@@ -246,4 +246,35 @@ revoke all on function public.profile_api_payload() from public;
 grant execute on function public.profile_api_payload() to authenticated;
 grant execute on function public.profile_api_payload() to service_role;
 
+-- User notifications (in-app bell); see migrations/010_user_notifications.sql
+create table if not exists user_notifications (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  title text not null,
+  body text,
+  link_href text,
+  kind text not null default 'system' check (kind in ('system', 'market', 'reminder', 'digest')),
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_user_notifications_user_created
+  on user_notifications (user_id, created_at desc);
+
+create index if not exists idx_user_notifications_user_unread
+  on user_notifications (user_id)
+  where read_at is null;
+
+create unique index if not exists uniq_user_welcome_notification
+  on user_notifications (user_id)
+  where title = 'Welcome to StockPulse';
+
+alter table user_notifications enable row level security;
+
+create policy "Users read own notifications" on user_notifications
+  for select using (auth.uid() = user_id);
+
+create policy "Users update own notifications" on user_notifications
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- Today hub tables: apply supabase/migrations/002_today_workspace.sql in Supabase (SQL editor) after initial schema.

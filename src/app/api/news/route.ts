@@ -1,26 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { scrapeNews } from '@/lib/scraper/news-scraper';
+import { isNewsRefreshWindow } from '@/lib/market/nse-session';
 
 const SCRAPE_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 let lastScrapeAt = 0;
 let scrapeInProgress = false;
 
-/** Check if Indian stock market is in extended hours (9 AM - 4 PM IST, Mon-Fri) */
-function isMarketHours(): boolean {
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
-  const day = ist.getUTCDay();
-  if (day === 0 || day === 6) return false;
-  const totalMinutes = ist.getUTCHours() * 60 + ist.getUTCMinutes();
-  return totalMinutes >= 540 && totalMinutes <= 960; // 9:00 AM - 4:00 PM IST
-}
-
-/** Trigger a background scrape if stale and during market hours */
+/** Trigger a background scrape if stale and during IST news window */
 function maybeScrapeInBackground() {
   const now = Date.now();
-  if (!isMarketHours()) return;
+  if (!isNewsRefreshWindow()) return;
   if (now - lastScrapeAt < SCRAPE_INTERVAL_MS) return;
   if (scrapeInProgress) return;
 
@@ -42,7 +32,7 @@ function maybeScrapeInBackground() {
 // GET /api/news?category=...&limit=50&offset=0
 export async function GET(request: NextRequest) {
   try {
-    // Fire-and-forget: scrape fresh news in background if stale during market hours
+    // Fire-and-forget: scrape fresh news in background if stale (IST weekday 9–16)
     maybeScrapeInBackground();
 
     const { searchParams } = new URL(request.url);

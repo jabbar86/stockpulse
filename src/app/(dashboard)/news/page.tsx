@@ -69,17 +69,6 @@ function timeAgo(dateStr: string): string {
 
 const AUTO_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 
-function isMarketOpen(): boolean {
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const ist = new Date(now.getTime() + istOffset + now.getTimezoneOffset() * 60 * 1000);
-  const day = ist.getUTCDay();
-  if (day === 0 || day === 6) return false;
-  const totalMinutes = ist.getUTCHours() * 60 + ist.getUTCMinutes();
-  // Refresh from 9:00 AM to 4:00 PM IST (slightly wider than trading hours for post-market news)
-  return totalMinutes >= 540 && totalMinutes <= 960;
-}
-
 export default function NewsPage() {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -99,7 +88,7 @@ export default function NewsPage() {
     try {
       const params = new URLSearchParams({ limit: String(LIMIT), offset: String(off) });
       if (cat) params.set('category', cat);
-      const res = await fetch(`/api/news?${params}`);
+      const res = await fetch(`/api/news?${params}`, { cache: 'no-store' });
       const data = await res.json();
       if (append) {
         setNews(prev => [...prev, ...(data.news || [])]);
@@ -122,18 +111,12 @@ export default function NewsPage() {
     fetchNews(category, 0, false);
   }, [category, fetchNews]);
 
-  // Auto-refresh during market hours every 30 minutes
+  // Poll every 30 minutes for new rows (server scrapes in IST window; refetch always updates the list)
   useEffect(() => {
-    function startAutoRefresh() {
-      if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
-      autoRefreshRef.current = setInterval(() => {
-        if (isMarketOpen()) {
-          fetchNews(category, 0, false);
-        }
-      }, AUTO_REFRESH_MS);
-    }
-
-    startAutoRefresh();
+    if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
+    autoRefreshRef.current = setInterval(() => {
+      fetchNews(category, 0, false);
+    }, AUTO_REFRESH_MS);
     return () => {
       if (autoRefreshRef.current) clearInterval(autoRefreshRef.current);
     };
@@ -163,11 +146,9 @@ export default function NewsPage() {
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Latest Indian stock market headlines
-            {isMarketOpen() && (
-              <span className="ml-2 text-xs text-green-600">
-                · Auto-refreshes every 30 min
-              </span>
-            )}
+            <span className="ml-2 text-xs text-muted-foreground">
+              · Refreshes every 30 min while this page is open
+            </span>
           </p>
         </div>
         <Button

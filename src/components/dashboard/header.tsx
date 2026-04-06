@@ -3,11 +3,11 @@
 import { useAuth } from '@/lib/auth/session-provider';
 import { usePathname } from 'next/navigation';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LineChart, CalendarDays, BellIcon } from 'lucide-react';
+import { LineChart, CalendarDays } from 'lucide-react';
 import { DashboardLink } from '@/components/dashboard/dashboard-link';
+import { NotificationsPopover } from '@/components/dashboard/notifications-popover';
 import { cn } from '@/lib/utils';
-import { Button, buttonVariants } from '@/components/ui/button';
-
+import { buttonVariants } from '@/components/ui/button';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -71,12 +71,12 @@ export default function Header() {
         ) : null}
       </div>
 
-      <div className="hidden items-center gap-2 md:flex">
+      <div className="flex items-center gap-1.5 md:gap-2">
         <DashboardLink
           href="/today"
           className={cn(
             buttonVariants({ variant: 'outline', size: 'sm' }),
-            'h-9 gap-2 rounded-xl'
+            'hidden h-9 gap-2 rounded-xl md:inline-flex'
           )}
         >
           <CalendarDays className="size-4 text-primary" />
@@ -88,29 +88,10 @@ export default function Header() {
             }).format(new Date())}
           </span>
         </DashboardLink>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-9 rounded-xl text-muted-foreground hover:text-foreground"
-          aria-label="Notifications"
-        >
-          <BellIcon className="size-[18px]" />
-        </Button>
+        <NotificationsPopover />
         <DashboardLink href="/profile" className="flex items-center">
-          <Avatar className="size-9 ring-2 ring-transparent transition-all hover:ring-primary/35">
-            <AvatarFallback className="bg-primary/15 text-xs font-semibold text-primary">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-        </DashboardLink>
-      </div>
-
-      {/* Mobile: theme toggle + avatar */}
-      <div className="flex items-center gap-1.5 md:hidden">
-        <DashboardLink href="/profile" className="flex items-center">
-          <Avatar className="size-8 ring-2 ring-transparent transition-all hover:ring-primary/35">
-            <AvatarFallback className="bg-primary/15 text-[10px] font-semibold text-primary">
+          <Avatar className="size-8 ring-2 ring-transparent transition-all hover:ring-primary/35 md:size-9">
+            <AvatarFallback className="bg-primary/15 text-[10px] font-semibold text-primary md:text-xs">
               {initials}
             </AvatarFallback>
           </Avatar>

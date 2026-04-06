@@ -91,6 +91,18 @@ export function getNseSession(now: Date = new Date()): NseSession {
   };
 }
 
+/**
+ * Mon–Fri 9:00–16:00 IST — background news scrape window (wider than NSE hours).
+ * Weekends off; NSE holidays still get scrapes so headlines stay current.
+ */
+export function isNewsRefreshWindow(now: Date = new Date()): boolean {
+  const ist = getISTParts(now);
+  const dayOfWeek = new Date(Date.UTC(ist.year, ist.month - 1, ist.day)).getUTCDay();
+  if (dayOfWeek === 0 || dayOfWeek === 6) return false;
+  const mins = ist.hour * 60 + ist.minute;
+  return mins >= 540 && mins <= 960;
+}
+
 /** How long quote Map entries are considered “fresh” before refetching Yahoo */
 export function getPriceCacheFreshTtlMs(session: NseSession): number {
   if (session.isOpen) return 15_000;

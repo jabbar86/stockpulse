@@ -95,6 +95,23 @@ export async function GET(request: NextRequest) {
       });
       if (result.ok) {
         sent += 1;
+        const ins = await service.from('user_notifications').insert({
+          user_id: row.user_id,
+          title: 'Daily digest sent',
+          body: `We emailed your Today summary for ${journalDate}.`,
+          link_href: '/today',
+          kind: 'digest',
+        });
+        if (ins.error) {
+          const msg = (ins.error.message ?? '').toLowerCase();
+          if (
+            ins.error.code !== '42P01' &&
+            !msg.includes('does not exist') &&
+            !msg.includes('schema cache')
+          ) {
+            console.warn('[cron] in-app digest notification', ins.error.message);
+          }
+        }
       } else {
         errors.push(`${to}: ${result.error}`);
       }
