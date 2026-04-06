@@ -164,6 +164,16 @@ export async function POST(
     return NextResponse.json(combinedAnalysis);
   } catch (error) {
     console.error('AI analysis error:', error);
+    const msg = error instanceof Error ? error.message : 'Internal server error';
+    if (msg.includes('No AI provider available')) {
+      return NextResponse.json(
+        {
+          error: msg,
+          code: 'NO_AI_PROVIDER' as const,
+        },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

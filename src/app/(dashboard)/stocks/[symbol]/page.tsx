@@ -30,6 +30,7 @@ import { StockAnalysisPageSkeleton } from '@/components/stocks/stock-page-skelet
 import { ComparisonChart } from '@/components/stocks/comparison-chart';
 import { FibonacciOverlay } from '@/components/stocks/fibonacci-overlay';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const CandlestickChart = dynamic(() => import('@/components/stocks/candlestick-chart'), {
   ssr: false,
@@ -194,12 +195,23 @@ export default function StockAnalysisPage() {
       const res = await fetch(`/api/stocks/${symbol}/ai-analysis`, {
         method: 'POST',
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        const data = await res.json();
         setAiAnalysis(data.ai || data.analysis || data);
+        return;
       }
+      if (res.status === 503 && (data as { code?: string }).code === 'NO_AI_PROVIDER') {
+        toast.error('AI not configured on the server', {
+          description:
+            'Add GROQ_API_KEY (free at console.groq.com) or run Ollama. See .env.example.',
+        });
+        return;
+      }
+      toast.error('Could not run AI analysis', {
+        description: typeof (data as { error?: string }).error === 'string' ? (data as { error: string }).error : undefined,
+      });
     } catch {
-      // silently fail
+      toast.error('Could not run AI analysis');
     } finally {
       setAiLoading(false);
     }

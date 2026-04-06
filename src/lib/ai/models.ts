@@ -67,14 +67,27 @@ const TASK_ROUTING: Record<AITaskType, { models: AIModel[]; maxTokens: number; t
   },
 };
 
+/** Local Ollama needs OLLAMA_ENABLED; a non-localhost OLLAMA_BASE_URL implies remote Ollama. */
+function isOllamaConfigured(): boolean {
+  if (process.env.OLLAMA_ENABLED === 'true' || process.env.OLLAMA_ENABLED === '1') {
+    return true;
+  }
+  const raw = process.env.OLLAMA_BASE_URL?.trim();
+  if (!raw) return false;
+  try {
+    const host = new URL(raw).hostname.toLowerCase();
+    if (host === 'localhost' || host === '127.0.0.1') return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Check whether a given provider's API key is configured */
 export function isProviderAvailable(provider: AIProvider): boolean {
   switch (provider) {
     case 'ollama':
-      return (
-        process.env.OLLAMA_ENABLED === 'true' ||
-        process.env.OLLAMA_ENABLED === '1'
-      );
+      return isOllamaConfigured();
     case 'groq':
       return Boolean(process.env.GROQ_API_KEY?.trim());
     case 'anthropic':
