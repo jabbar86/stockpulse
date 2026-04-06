@@ -142,7 +142,16 @@ export default function Sidebar() {
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-[15px] font-semibold text-foreground truncate">{name}</p>
-            <p className="text-xs text-muted-foreground truncate">Premium Pro</p>
+            <p
+              className={cn(
+                'text-xs truncate',
+                profile?.is_premium === true
+                  ? 'font-medium text-primary'
+                  : 'text-muted-foreground'
+              )}
+            >
+              {profile?.is_premium === true ? 'Premium' : 'Free'}
+            </p>
           </div>
         </DashboardLink>
       </div>

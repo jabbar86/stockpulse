@@ -19,6 +19,8 @@ function clearSessionStartForUser(userId: string) {
 interface UserProfile {
   name: string;
   email: string;
+  /** Mirrors `profiles.is_premium`; omitted/false = Free plan. */
+  is_premium?: boolean;
 }
 
 interface AuthContextType {
@@ -131,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function fetchProfile(userId: string) {
     let { data } = await supabase
       .from('profiles')
-      .select('name, email')
+      .select('name, email, is_premium')
       .eq('id', userId)
       .maybeSingle();
 
@@ -145,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (res.ok) {
           const retry = await supabase
             .from('profiles')
-            .select('name, email')
+            .select('name, email, is_premium')
             .eq('id', userId)
             .maybeSingle();
           data = retry.data;
@@ -165,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile({
           name: authUser.user_metadata?.name || '',
           email: authUser.email || '',
+          is_premium: false,
         });
       }
     }
