@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import CSVImportDialog from '@/components/portfolio/csv-import-dialog';
 import { CSV_EXPORT_GUIDES } from '@/lib/brokers/csv-guides';
+import { useAuth } from '@/lib/auth/session-provider';
 
 // ── Broker definitions ──────────────────────────────────────────────
 
@@ -173,6 +174,8 @@ const AUTO_SYNC_INTERVAL = 5 * 60 * 1000;
 export default function BrokersPage() {
   const router = useRouter();
   const navPending = useOptionalNavigationPending();
+  const { profile, loading: authLoading } = useAuth();
+  const isPremium = profile?.is_premium === true;
   const [connections, setConnections] = useState<Record<string, BrokerConnection | null>>({});
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
@@ -460,115 +463,217 @@ export default function BrokersPage() {
         </div>
       </div>
 
-      {/* ── API Brokers (Auto-sync) — LOCKED / Premium ────────────── */}
+      {/* ── API Brokers (Auto-sync) — Premium unlocks live connect ────────────── */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <h2 className="text-sm sm:text-base font-semibold text-muted-foreground">
             Connect Broker (Auto-sync)
             <span className="ml-2 text-xs font-normal">— {API_BROKERS.length} brokers</span>
           </h2>
-          <Badge className="bg-amber-500/10 text-amber-600 gap-1 text-[10px]">
-            <CrownIcon className="size-2.5" />
-            Premium
-          </Badge>
+          {!authLoading && isPremium && (
+            <Badge className="bg-emerald-500/10 text-emerald-700 gap-1 text-[10px]">
+              <CheckCircle2Icon className="size-2.5" />
+              Unlocked
+            </Badge>
+          )}
+          {!authLoading && !isPremium && (
+            <Badge className="bg-amber-500/10 text-amber-600 gap-1 text-[10px]">
+              <CrownIcon className="size-2.5" />
+              Premium
+            </Badge>
+          )}
         </div>
 
-        {/* Locked broker grid — blurred with overlay */}
-        <div className="relative">
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 pointer-events-none select-none opacity-40 blur-[2px]">
-            {API_BROKERS.map((broker) => (
-              <Card key={broker.id}>
-                <CardContent className="p-4 sm:p-5">
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <div className={`flex size-10 items-center justify-center rounded-xl ${broker.bgColor}`}>
-                      <span className={`text-base font-bold ${broker.color}`}>
-                        {broker.name[0]}
-                      </span>
-                    </div>
-                    <div>
-                      <p className={`font-semibold text-sm sm:text-base ${broker.color}`}>{broker.name}</p>
-                      <p className="text-[11px] text-muted-foreground">{broker.description}</p>
-                    </div>
-                  </div>
-                  <Button disabled className="gap-1.5 w-full text-sm">
-                    <LockIcon className="size-3.5" />
-                    {broker.loginLabel}
-                  </Button>
+        {authLoading ? (
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-4 sm:p-5 space-y-3">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-10 w-full" />
                 </CardContent>
               </Card>
             ))}
           </div>
+        ) : isPremium ? (
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {API_BROKERS.map((broker) => {
+              const conn = connections[broker.id];
+              const connected = conn?.status === 'connected';
+              const brokerUnavailable = unavailable.has(broker.id);
 
-          {/* Overlay */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Card className="w-full max-w-md mx-4 shadow-lg border-amber-500/20">
-              <CardContent className="p-5 sm:p-6">
-                <div className="text-center mb-4">
-                  <div className="flex size-12 items-center justify-center rounded-full bg-amber-500/10 mx-auto mb-3">
-                    <LockIcon className="size-6 text-amber-600" />
-                  </div>
-                  <h3 className="text-base sm:text-lg font-semibold">Premium Feature</h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    Auto-sync with brokers is available for premium users. Request access and we&apos;ll enable it for you.
-                  </p>
-                </div>
+              return (
+                <Card key={broker.id}>
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className={`flex size-10 items-center justify-center rounded-xl ${broker.bgColor}`}>
+                        <span className={`text-base font-bold ${broker.color}`}>{broker.name[0]}</span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`font-semibold text-sm sm:text-base ${broker.color}`}>{broker.name}</p>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2">{broker.description}</p>
+                      </div>
+                    </div>
 
-                {premiumRequested ? (
-                  <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4 text-center">
-                    <CheckCircle2Icon className="size-8 text-green-600 mx-auto mb-2" />
-                    <p className="text-sm font-medium text-green-700">Submitted!</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      We&apos;ll review your request and get back to you shortly.
+                    {connected ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <CheckCircle2Icon className="size-3.5 text-emerald-600 shrink-0" />
+                          <span>Connected · synced {formatLastSynced(conn?.last_synced)}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 flex-1 min-w-[100px]"
+                            onClick={() => handleSync(broker.id)}
+                            disabled={syncing === broker.id}
+                          >
+                            {syncing === broker.id ? (
+                              <Loader2Icon className="size-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCwIcon className="size-3.5" />
+                            )}
+                            Sync
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="gap-1.5 flex-1 min-w-[100px]"
+                            onClick={() => handleDisconnect(broker.id)}
+                            disabled={disconnecting === broker.id}
+                          >
+                            {disconnecting === broker.id ? (
+                              <Loader2Icon className="size-3.5 animate-spin" />
+                            ) : (
+                              <UnlinkIcon className="size-3.5" />
+                            )}
+                            Disconnect
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <Button
+                          className="gap-1.5 w-full text-sm"
+                          onClick={() => handleConnect(broker)}
+                          disabled={connecting === broker.id || brokerUnavailable}
+                        >
+                          {connecting === broker.id ? (
+                            <Loader2Icon className="size-3.5 animate-spin" />
+                          ) : (
+                            <LogInIcon className="size-3.5" />
+                          )}
+                          {broker.loginLabel}
+                        </Button>
+                        {brokerUnavailable && (
+                          <p className="text-[10px] text-amber-600 mt-2">
+                            Connection unavailable — check env or try again later.
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 pointer-events-none select-none opacity-40 blur-[2px]">
+              {API_BROKERS.map((broker) => (
+                <Card key={broker.id}>
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className={`flex size-10 items-center justify-center rounded-xl ${broker.bgColor}`}>
+                        <span className={`text-base font-bold ${broker.color}`}>
+                          {broker.name[0]}
+                        </span>
+                      </div>
+                      <div>
+                        <p className={`font-semibold text-sm sm:text-base ${broker.color}`}>{broker.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{broker.description}</p>
+                      </div>
+                    </div>
+                    <Button disabled className="gap-1.5 w-full text-sm">
+                      <LockIcon className="size-3.5" />
+                      {broker.loginLabel}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Card className="w-full max-w-md mx-4 shadow-lg border-amber-500/20">
+                <CardContent className="p-5 sm:p-6">
+                  <div className="text-center mb-4">
+                    <div className="flex size-12 items-center justify-center rounded-full bg-amber-500/10 mx-auto mb-3">
+                      <LockIcon className="size-6 text-amber-600" />
+                    </div>
+                    <h3 className="text-base sm:text-lg font-semibold">Premium Feature</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      Auto-sync with brokers is available for premium users. Request access and we&apos;ll enable it for you.
                     </p>
                   </div>
-                ) : (
-                  <form onSubmit={handlePremiumRequest} className="space-y-3">
-                    <div>
-                      <input
-                        type="text"
-                        placeholder="Your name"
-                        value={contactName}
-                        onChange={(e) => setContactName(e.target.value)}
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
+
+                  {premiumRequested ? (
+                    <div className="rounded-lg border border-green-500/20 bg-green-500/5 p-4 text-center">
+                      <CheckCircle2Icon className="size-8 text-green-600 mx-auto mb-2" />
+                      <p className="text-sm font-medium text-green-700">Submitted!</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        We&apos;ll review your request and get back to you shortly.
+                      </p>
                     </div>
-                    <div>
-                      <input
-                        type="email"
-                        placeholder="Your email *"
-                        required
-                        value={contactEmail}
-                        onChange={(e) => setContactEmail(e.target.value)}
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
-                    </div>
-                    <div>
-                      <textarea
-                        placeholder="Which broker(s) do you use? (optional)"
-                        value={contactMessage}
-                        onChange={(e) => setContactMessage(e.target.value)}
-                        rows={2}
-                        className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      disabled={premiumSubmitting}
-                      className="w-full gap-1.5"
-                    >
-                      {premiumSubmitting ? (
-                        <Loader2Icon className="size-3.5 animate-spin" />
-                      ) : (
-                        <SendIcon className="size-3.5" />
-                      )}
-                      {premiumSubmitting ? 'Submitting...' : 'Request Access'}
-                    </Button>
-                  </form>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <form onSubmit={handlePremiumRequest} className="space-y-3">
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Your name"
+                          value={contactName}
+                          onChange={(e) => setContactName(e.target.value)}
+                          className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="email"
+                          placeholder="Your email *"
+                          required
+                          value={contactEmail}
+                          onChange={(e) => setContactEmail(e.target.value)}
+                          className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        />
+                      </div>
+                      <div>
+                        <textarea
+                          placeholder="Which broker(s) do you use? (optional)"
+                          value={contactMessage}
+                          onChange={(e) => setContactMessage(e.target.value)}
+                          rows={2}
+                          className="w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={premiumSubmitting}
+                        className="w-full gap-1.5"
+                      >
+                        {premiumSubmitting ? (
+                          <Loader2Icon className="size-3.5 animate-spin" />
+                        ) : (
+                          <SendIcon className="size-3.5" />
+                        )}
+                        {premiumSubmitting ? 'Submitting...' : 'Request Access'}
+                      </Button>
+                    </form>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ── CSV-Only Brokers ───────────────────────────────────────── */}

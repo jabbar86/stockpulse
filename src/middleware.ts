@@ -3,14 +3,10 @@ import { createMiddlewareClient } from '@/lib/supabase/middleware';
 
 export async function middleware(request: NextRequest) {
   const { supabase, supabaseResponse } = await createMiddlewareClient(request);
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
+  // Keep cookies refreshed for SSR, but do not hard-redirect here.
+  // Redirecting in middleware can force a login loop when the session needs to
+  // rehydrate after a tab/browser restart. The dashboard layout enforces auth.
+  await supabase.auth.getUser();
   return supabaseResponse;
 }
 
