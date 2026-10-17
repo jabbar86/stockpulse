@@ -28,6 +28,7 @@ export default function AddHoldingDialog({ open, onOpenChange, onSuccess }: AddH
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [quantity, setQuantity] = useState('');
   const [avgPrice, setAvgPrice] = useState('');
+  const [buyDate, setBuyDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -70,6 +71,7 @@ export default function AddHoldingDialog({ open, onOpenChange, onSuccess }: AddH
       setSelectedStock(null);
       setQuantity('');
       setAvgPrice('');
+      setBuyDate('');
       setError('');
     }
   }, [open]);
@@ -103,6 +105,7 @@ export default function AddHoldingDialog({ open, onOpenChange, onSuccess }: AddH
           quantity: Number(quantity),
           avg_price: Number(avgPrice),
           source: 'manual',
+          ...(buyDate ? { buy_date: buyDate } : {}),
         }),
       });
 
@@ -215,6 +218,23 @@ export default function AddHoldingDialog({ open, onOpenChange, onSuccess }: AddH
               value={avgPrice}
               onChange={(e) => setAvgPrice(e.target.value)}
             />
+          </div>
+
+          {/* Buy date (optional, for capital-gains estimate) */}
+          <div className="space-y-2">
+            <Label htmlFor="buy-date">
+              Buy date <span className="font-normal text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              id="buy-date"
+              type="date"
+              max={new Date().toISOString().slice(0, 10)}
+              value={buyDate}
+              onChange={(e) => setBuyDate(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Used to estimate short- vs long-term capital gains. Leave blank to use today&apos;s date.
+            </p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

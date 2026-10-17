@@ -6,6 +6,14 @@ import { z } from 'zod';
 export const maxDuration = 30;
 
 // Validation schemas
+const buyDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+  .refine((v) => !Number.isNaN(Date.parse(v)), 'Invalid date')
+  // Allow up to +1 day so IST users near midnight aren't rejected by a UTC server.
+  .refine((v) => Date.parse(v) <= Date.now() + 86_400_000, 'Buy date cannot be in the future')
+  .nullable();
+
 const addHoldingSchema = z.object({
   symbol: z.string().min(1).max(20),
   name: z.string().min(1).max(200),
@@ -13,12 +21,14 @@ const addHoldingSchema = z.object({
   quantity: z.number().positive(),
   avg_price: z.number().positive(),
   source: z.enum(['manual', 'upstox', 'angelone', 'fyers', 'csv']).default('manual'),
+  buy_date: buyDateSchema.optional(),
 });
 
 const updateHoldingSchema = z.object({
   id: z.string().uuid(),
   quantity: z.number().positive().optional(),
   avg_price: z.number().positive().optional(),
+  buy_date: buyDateSchema.optional(),
 });
 
 // GET /api/portfolio - fetch user holdings from DB (prices come from client-side polling)
@@ -76,6 +86,7 @@ export async function POST(request: NextRequest) {
         quantity: parsed.data.quantity,
         avg_price: parsed.data.avg_price,
         source: parsed.data.source,
+        buy_date: parsed.data.buy_date ?? null,
       })
       .select()
       .single();

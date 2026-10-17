@@ -29,6 +29,7 @@ import { StockChartSkeleton } from '@/components/stocks/stock-chart-skeleton';
 import { StockAnalysisPageSkeleton } from '@/components/stocks/stock-page-skeleton';
 import { ComparisonChart } from '@/components/stocks/comparison-chart';
 import { FibonacciOverlay } from '@/components/stocks/fibonacci-overlay';
+import { PriceAlertsCard } from '@/components/stocks/price-alerts-card';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -660,6 +661,12 @@ export default function StockAnalysisPage() {
       {analysis && (
         <ComparisonChart symbol={symbol} period="3mo" />
       )}
+
+      <PriceAlertsCard
+        symbol={symbol}
+        exchange={stockQuote?.symbol?.endsWith('.BO') || exchange === 'BSE' ? 'BSE' : 'NSE'}
+        currentPrice={stockQuote?.price}
+      />
 
       <div className="space-y-2">
         <div>

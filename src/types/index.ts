@@ -45,6 +45,8 @@ export interface Holding {
   quantity: number;
   avg_price: number;
   current_price?: number;
+  /** Purchase date (YYYY-MM-DD); null = unknown, fall back to created_at. */
+  buy_date?: string | null;
   source: 'manual' | 'upstox' | 'angelone' | 'fyers' | 'zerodha' | 'groww' | '5paisa' | 'dhan' | 'kotak' | 'icici' | 'hdfc' | 'motilal' | 'sharekhan' | 'paytm' | 'csv';
   created_at: string;
   updated_at: string;

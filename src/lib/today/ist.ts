@@ -67,3 +67,8 @@ export function formatYmdDisplay(ymd: string): string {
   if (!y || !m || !d || m < 1 || m > 12) return ymd;
   return `${d} ${SHORT_MONTHS[m - 1]} ${y}`;
 }
+
+/** UTC instant of 00:00 IST on the IST calendar day containing `date`. */
+export function istDayStartUtc(date: Date = new Date()): Date {
+  return new Date(`${istYmd(date)}T00:00:00+05:30`);
+}

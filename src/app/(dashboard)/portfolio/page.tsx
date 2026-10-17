@@ -32,6 +32,7 @@ import {
 import { RiskDashboard } from '@/components/portfolio/risk-dashboard';
 import { CorrelationMatrix } from '@/components/portfolio/correlation-matrix';
 import { PortfolioSignalsCard } from '@/components/portfolio/portfolio-signals-card';
+import { TaxEstimateCard } from '@/components/portfolio/tax-estimate-card';
 import { calculateRiskMetrics } from '@/lib/analysis/risk-scoring';
 
 function formatCurrency(value: number): string {
@@ -58,6 +59,7 @@ export default function PortfolioPage() {
   const [editHolding, setEditHolding] = useState<HoldingWithMetrics | null>(null);
   const [editQuantity, setEditQuantity] = useState('');
   const [editAvgPrice, setEditAvgPrice] = useState('');
+  const [editBuyDate, setEditBuyDate] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   // Delete state
@@ -124,6 +126,7 @@ export default function PortfolioPage() {
     setEditHolding(holding);
     setEditQuantity(String(holding.quantity));
     setEditAvgPrice(String(holding.avg_price));
+    setEditBuyDate(holding.buy_date ?? '');
   };
 
   const handleEditSubmit = async () => {
@@ -137,6 +140,7 @@ export default function PortfolioPage() {
           id: editHolding.id,
           quantity: Number(editQuantity),
           avg_price: Number(editAvgPrice),
+          buy_date: editBuyDate || null,
         }),
       });
       if (res.ok) {
@@ -341,6 +345,9 @@ export default function PortfolioPage() {
         )}
       </div>
 
+      {/* Capital gains tax estimate */}
+      {!loading && liveHoldings.length > 0 && <TaxEstimateCard holdings={liveHoldings} />}
+
       {/* Risk Dashboard & Correlation Matrix */}
       {!loading && liveHoldings.length >= 2 && (
         <div className="space-y-4">
@@ -393,6 +400,16 @@ export default function PortfolioPage() {
                 step="0.01"
                 value={editAvgPrice}
                 onChange={(e) => setEditAvgPrice(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-buy-date">Buy date</Label>
+              <Input
+                id="edit-buy-date"
+                type="date"
+                max={new Date().toISOString().slice(0, 10)}
+                value={editBuyDate}
+                onChange={(e) => setEditBuyDate(e.target.value)}
               />
             </div>
           </div>

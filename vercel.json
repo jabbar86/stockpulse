@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/algo-paper",
       "schedule": "30 4 * * 1-5"
+    },
+    {
+      "path": "/api/cron/price-alerts",
+      "schedule": "0 10 * * 1-5"
     }
   ]
 }

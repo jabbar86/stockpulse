@@ -6,6 +6,7 @@ import { analyzeStock } from '@/lib/analysis/claude-analysis';
 import { getCombinedRecommendation } from '@/lib/analysis/recommendation';
 import type { CombinedAnalysis } from '@/types';
 import { getUpstoxToken } from '@/lib/brokers/upstox-token';
+import { istDayStartUtc } from '@/lib/today/ist';
 
 /**
  * Check if Indian stock market is currently in trading hours.
@@ -59,19 +60,20 @@ export async function POST(
     const isPremium = profile?.is_premium === true;
     const maxAnalyses = profile?.max_ai_analyses ?? (isPremium ? 10 : 5);
 
-    // Quota check: 5 total for free users, 10 total for premium
+    // Quota check: per IST calendar day (5/day free, 10/day premium by default)
     const { count: analysisCount } = await serviceClient
       .from('analysis_history')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .eq('type', 'ai')
-      .eq('cached', false);
+      .eq('cached', false)
+      .gte('created_at', istDayStartUtc().toISOString());
 
     if (analysisCount !== null && analysisCount >= maxAnalyses) {
       return NextResponse.json(
         {
           error: 'Rate limit exceeded',
-          message: `You have used all ${maxAnalyses} AI analyses.${!isPremium ? ' Upgrade to premium for more analyses.' : ''}`,
+          message: `You have used all ${maxAnalyses} AI analyses for today. Your quota resets at midnight IST.${!isPremium ? ' Upgrade to premium for more analyses.' : ''}`,
         },
         { status: 429 }
       );

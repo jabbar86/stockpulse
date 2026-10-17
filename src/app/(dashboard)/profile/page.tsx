@@ -304,7 +304,7 @@ export default function ProfilePage() {
                   <BrainCircuitIcon className="size-4 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">AI Credits Used</p>
+                  <p className="text-xs text-muted-foreground">AI Credits Today</p>
                   <p className="text-sm font-semibold">
                     {profile!.ai_analyses_used} / {profile!.max_ai_analyses}
                   </p>
