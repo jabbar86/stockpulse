@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -21,6 +22,7 @@ const jetbrainsMono = JetBrains_Mono({
 const googleVerification = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim();
 const twitterSite = process.env.NEXT_PUBLIC_TWITTER_SITE?.trim();
 const twitterCreator = process.env.NEXT_PUBLIC_TWITTER_CREATOR?.trim();
+const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID?.trim() || 'G-V4W7M9PCMY';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
@@ -89,6 +91,16 @@ export default function RootLayout({
       >
         <JsonLdSite />
         <TooltipProvider>{children}</TooltipProvider>
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${gaMeasurementId}');`}
+        </Script>
       </body>
     </html>
   );
