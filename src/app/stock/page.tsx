@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { NIFTY_50 } from '@/lib/market-data/universe';
+import { NIFTY_50, NIFTY_NEXT_50 } from '@/lib/market-data/universe';
 import { siteUrl, SITE_NAME } from '@/lib/seo/site-config';
-import { PUBLIC_STOCK_SYMBOLS, isNifty50, stockPath } from '@/lib/seo/public-pages';
+import { stockPath } from '@/lib/seo/public-pages';
 import { PublicShell } from '@/components/seo/public-shell';
 
 const canonical = `${siteUrl()}/stock`;
@@ -35,7 +35,6 @@ function SymbolGrid({ symbols }: { symbols: readonly string[] }) {
 }
 
 export default function StockIndexPage() {
-  const nextFifty = PUBLIC_STOCK_SYMBOLS.filter((s) => !isNifty50(s));
   return (
     <PublicShell>
       <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Indian stocks: prices & analysis</h1>
@@ -48,7 +47,7 @@ export default function StockIndexPage() {
 
       <section className="mt-8">
         <h2 className="text-lg font-semibold">Nifty Next 50 (Nifty 100) stocks</h2>
-        <SymbolGrid symbols={nextFifty} />
+        <SymbolGrid symbols={NIFTY_NEXT_50} />
       </section>
     </PublicShell>
   );
