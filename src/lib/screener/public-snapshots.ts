@@ -1,4 +1,5 @@
 import { unstable_cache } from 'next/cache';
+import { NIFTY_100 } from '@/lib/market-data/universe';
 import { computeUniverseSnapshots } from '@/lib/screener/universe-snapshots';
 
 /**
@@ -13,6 +14,7 @@ export const getPublicNifty100Snapshots = unstable_cache(
     if (entry.snapshots.length === 0) throw new Error('No screener snapshots available');
     return entry;
   },
-  ['public-screener-nifty100'],
+  // The symbol list is part of the key, so an index rebalance invalidates the cache on deploy.
+  ['public-screener-nifty100', NIFTY_100.join(',')],
   { revalidate: 3 * 60 * 60 }
 );
