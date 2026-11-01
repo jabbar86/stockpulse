@@ -32,7 +32,7 @@ export const NIFTY_50: string[] = [
   'JSWSTEEL',
   'KOTAKBANK',
   'LT',
-  'LTIM',
+  'LTM', // LTIMindtree, renamed LTM Ltd (was LTIM)
   'M&M',
   'MARUTI',
   'NESTLEIND',
@@ -45,7 +45,7 @@ export const NIFTY_50: string[] = [
   'SHRIRAMFIN',
   'SUNPHARMA',
   'TATACONSUM',
-  'TATAMOTORS',
+  'TMPV', // Tata Motors Passenger Vehicles (was TATAMOTORS before the 2025 demerger)
   'TATASTEEL',
   'TCS',
   'TECHM',

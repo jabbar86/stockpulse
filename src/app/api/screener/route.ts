@@ -1,45 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getHistoricalData } from '@/lib/market-data/provider';
-import { NIFTY_50, NIFTY_100, type UniverseId } from '@/lib/market-data/universe';
-import { buildSnapshot, type ScreenerSnapshot } from '@/lib/screener/filters';
+import type { UniverseId } from '@/lib/market-data/universe';
+import { computeUniverseSnapshots, type UniverseSnapshots } from '@/lib/screener/universe-snapshots';
 
 export const maxDuration = 60;
 
 // Daily-bar snapshots change slowly; share one computation per universe across requests.
 const SNAPSHOT_TTL_MS = 30 * 60 * 1000;
-const BATCH_SIZE = 10;
 
-type CacheEntry = { snapshots: ScreenerSnapshot[]; failed: number; generatedAt: string; fetchedAt: number };
+type CacheEntry = UniverseSnapshots;
 const snapshotCache = new Map<UniverseId, CacheEntry>();
 const inFlight = new Map<UniverseId, Promise<CacheEntry>>();
-
-async function computeUniverse(universe: UniverseId): Promise<CacheEntry> {
-  const symbols = universe === 'nifty50' ? NIFTY_50 : NIFTY_100;
-  const snapshots: ScreenerSnapshot[] = [];
-  let failed = 0;
-
-  for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
-    const batch = symbols.slice(i, i + BATCH_SIZE);
-    const results = await Promise.all(
-      batch.map(async (symbol) => {
-        try {
-          const candles = await getHistoricalData(symbol, '1y', 'NSE');
-          return buildSnapshot(symbol, candles);
-        } catch (e) {
-          console.warn('Screener snapshot failed for', symbol, e);
-          return null;
-        }
-      })
-    );
-    for (const r of results) {
-      if (r) snapshots.push(r);
-      else failed += 1;
-    }
-  }
-
-  return { snapshots, failed, generatedAt: new Date().toISOString(), fetchedAt: Date.now() };
-}
 
 async function getSnapshots(universe: UniverseId): Promise<CacheEntry> {
   const cached = snapshotCache.get(universe);
@@ -47,7 +18,7 @@ async function getSnapshots(universe: UniverseId): Promise<CacheEntry> {
 
   let pending = inFlight.get(universe);
   if (!pending) {
-    pending = computeUniverse(universe)
+    pending = computeUniverseSnapshots(universe)
       .then((entry) => {
         // Don't pin an empty result (e.g. upstream outage) for the full TTL.
         if (entry.snapshots.length > 0) snapshotCache.set(universe, entry);

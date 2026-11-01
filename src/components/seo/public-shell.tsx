@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { LineChart } from 'lucide-react';
 import { SITE_NAME } from '@/lib/seo/site-config';
-import { CALCULATORS } from '@/lib/seo/public-pages';
+import { CALCULATORS, SCREENERS } from '@/lib/seo/public-pages';
 import { MarketRiskDisclaimer } from '@/components/legal/market-risk-disclaimer';
 
 /** Header + footer for public, indexable pages (stock pages, calculators). */
@@ -19,6 +19,9 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
           <nav className="flex items-center gap-4 text-sm text-muted-foreground">
             <Link href="/stock" className="hover:text-foreground">
               Stocks
+            </Link>
+            <Link href="/stock-screener" className="hidden hover:text-foreground sm:inline">
+              Screener
             </Link>
             <Link href="/calculators" className="hover:text-foreground">
               Calculators
@@ -44,6 +47,11 @@ export function PublicShell({ children }: { children: React.ReactNode }) {
             {CALCULATORS.map((c) => (
               <Link key={c.slug} href={`/calculators/${c.slug}`} className="hover:text-foreground">
                 {c.name}
+              </Link>
+            ))}
+            {SCREENERS.map((s) => (
+              <Link key={s.slug} href={`/stock-screener/${s.slug}`} className="hover:text-foreground">
+                {s.name}
               </Link>
             ))}
             <Link href="/privacy" className="hover:text-foreground">

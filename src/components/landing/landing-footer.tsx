@@ -7,6 +7,7 @@ const PRODUCT_LINKS = [
   { href: '#how-it-works', label: 'How it works' },
   { href: '#pricing', label: 'Pricing' },
   { href: '/stock', label: 'Stock prices' },
+  { href: '/stock-screener', label: 'Stock screener' },
   { href: '/calculators', label: 'Calculators' },
   { href: '/login', label: 'Dashboard' },
 ] as const;

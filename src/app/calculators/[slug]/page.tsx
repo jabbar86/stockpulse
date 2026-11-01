@@ -7,6 +7,7 @@ import { PublicShell, JsonLd } from '@/components/seo/public-shell';
 import { SipCalculator } from '@/components/tools/sip-calculator';
 import { ChargesCalculator } from '@/components/tools/charges-calculator';
 import { PositionSizeCalculator } from '@/components/tools/position-size-calculator';
+import { CapitalGainsCalculator } from '@/components/tools/capital-gains-calculator';
 
 export const dynamicParams = false;
 
@@ -16,6 +17,7 @@ export function generateStaticParams() {
 
 const WIDGETS: Record<CalculatorSlug, React.ComponentType> = {
   'sip-calculator': SipCalculator,
+  'capital-gains-tax-calculator': CapitalGainsCalculator,
   'brokerage-calculator': ChargesCalculator,
   'position-size-calculator': PositionSizeCalculator,
 };
